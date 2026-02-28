@@ -38,13 +38,11 @@
 #define MB(x)                           ((x) << (MB_SHIFT))
 #define GB(x)                           ((x) << (GB_SHIFT))
 
-#define LIL_END_TO_BIG_END_8(x)         (uint8_t(x))
-#define LIL_END_TO_BIG_END_16(x)        (BIT_8_RIGHT_SHIFT(x) | BIT_8_LEFT_SHIFT(x))
-#define LIL_END_TO_BIG_END_24(x)        (LIL_END_TO_BIG_END_16((x)) | (BIT_16_LEFT_SHIFT(x)) | BIT_8_RIGHT_SHIFT(x))
-#define LIL_END_TO_BIG_END_32(x)        (LIL_END_TO_BIG_END_16(BIT_16_RIGHT_SHIFT(x)) | LIL_END_TO_BIG_END_16(BIT_16_LEFT_SHIFT(x)))
-#define LIL_END_TO_BIG_END_64(x)        (LIL_END_TO_BIG_END_32(BIT_32_RIGHT_SHIFT(x)) | LIL_END_TO_BIG_END_32(BIT_32_LEFT_SHIFT(x)))
+#define LIL_END_TO_BIG_END_16(x)        ((BIT_8_RIGHT_SHIFT(x) & 0xFF) | (BIT_8_LEFT_SHIFT(x) & 0xFF))
+#define LIL_END_TO_BIG_END_24(x)        ((LIL_END_TO_BIG_END_16((x)) & 0xFF)| ((BIT_16_LEFT_SHIFT(x)) & 0xFF) | (BIT_8_RIGHT_SHIFT(x) & 0xFF))
+#define LIL_END_TO_BIG_END_32(x)        ((LIL_END_TO_BIG_END_16(BIT_16_RIGHT_SHIFT(x)) & 0xFFFF) | (LIL_END_TO_BIG_END_16(BIT_16_LEFT_SHIFT(x)) & 0xFFFF))
+#define LIL_END_TO_BIG_END_64(x)        ((LIL_END_TO_BIG_END_32(BIT_32_RIGHT_SHIFT(x)) & 0xFFFFFFFF) | (LIL_END_TO_BIG_END_32(BIT_32_LEFT_SHIFT(x)) & 0xFFFFFFFF))
 
-#define BIG_END_TO_LIL_END_8(x)         (uint8_t(x))
 #define BIG_END_TO_LIL_END_16(x)        LIL_END_TO_BIG_END_16(x)
 #define BIG_END_TO_LIL_END_24(x)        LIL_END_TO_BIG_END_24(x)
 #define BIG_END_TO_LIL_END_32(x)        LIL_END_TO_BIG_END_32(x)
