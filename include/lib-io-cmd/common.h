@@ -1,9 +1,18 @@
+/*******************************************************************
+*                Sumukha IO-TOOLs OPEN-SOURCE                      *
+********************************************************************/
+
 #ifndef COMMON_H
 #define COMMON_H
 
 #include <stdint.h>
 #include <string.h>
 #include <stddef.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <stdbool.h>
 
 #define BYTES_128                       128
 #define BYTES_256                       256
@@ -20,15 +29,15 @@
 #define BIT_32                          32
 #define BIT_64                          64
 
-#define BIT_8_RIGHT_SHIFT               (1 >> 8)
-#define BIT_16_RIGHT_SHIFT              (1 >> 16)
-#define BIT_32_RIGHT_SHIFT              (1 >> 32)
-#define BIT_64_RIGHT_SHIFT              (1 >> 64)
+#define BIT_8_RIGHT_SHIFT(x)            (x >> 8)
+#define BIT_16_RIGHT_SHIFT(x)           (x >> 16)
+#define BIT_32_RIGHT_SHIFT(x)           (x >> 32)
+#define BIT_64_RIGHT_SHIFT(x)           (x >> 64)
 
-#define BIT_8_LEFT_SHIFT                (1 << 8)
-#define BIT_16_LEFT_SHIFT               (1 << 16)
-#define BIT_32_LEFT_SHIFT               (1 << 32)
-#define BIT_64_LEFT_SHIFT               (1 << 64)
+#define BIT_8_LEFT_SHIFT(x)             (x << 8)
+#define BIT_16_LEFT_SHIFT(x)            (x << 16)
+#define BIT_32_LEFT_SHIFT(x)            (x << 32)
+#define BIT_64_LEFT_SHIFT(x)            (x << 64)
 
 #define KB_SHIFT                        10
 #define MB_SHIFT                        20
@@ -39,7 +48,7 @@
 #define GB(x)                           ((x) << (GB_SHIFT))
 
 #define LIL_END_TO_BIG_END_16(x)        ((BIT_8_RIGHT_SHIFT(x) & 0xFF) | (BIT_8_LEFT_SHIFT(x) & 0xFF))
-#define LIL_END_TO_BIG_END_24(x)        ((LIL_END_TO_BIG_END_16((x)) & 0xFF)| ((BIT_16_LEFT_SHIFT(x)) & 0xFF) | (BIT_8_RIGHT_SHIFT(x) & 0xFF))
+#define LIL_END_TO_BIG_END_24(x)        (((BIT_16_LEFT_SHIFT(x)) & 0xFF) | (BIT_16_RIGHT_SHIFT(x) & 0xFF))
 #define LIL_END_TO_BIG_END_32(x)        ((LIL_END_TO_BIG_END_16(BIT_16_RIGHT_SHIFT(x)) & 0xFFFF) | (LIL_END_TO_BIG_END_16(BIT_16_LEFT_SHIFT(x)) & 0xFFFF))
 #define LIL_END_TO_BIG_END_64(x)        ((LIL_END_TO_BIG_END_32(BIT_32_RIGHT_SHIFT(x)) & 0xFFFFFFFF) | (LIL_END_TO_BIG_END_32(BIT_32_LEFT_SHIFT(x)) & 0xFFFFFFFF))
 
@@ -48,8 +57,10 @@
 #define BIG_END_TO_LIL_END_32(x)        LIL_END_TO_BIG_END_32(x)
 #define BIG_END_TO_LIL_END_64(x)        LIL_END_TO_BIG_END_64(x)
 
-#define TE_PASS                         TRUE
-#define TE_FAIL                         FALSE
+typedef enum {
+    TE_FAIL = 0,
+    TE_PASS = 1
+} status_t;
 
 #ifdef _WIN32
 
@@ -61,6 +72,7 @@
     __pragma(pack(pop))                          \
     }
 
+#define safe_fprintf fprintf_s
 #endif
 
 #ifdef __linux__
@@ -70,8 +82,11 @@
             structure                            \
     } __attribute__((packed))  struct_name;      \
     }
-
+#define safe_fprintf fprintf
 #endif
 
+extern status_t get_local_time (struct tm* local_time, const char* raw_time);
+extern void log_info (void* log_file, uint8_t log_level, const char* format, ...);
+extern void log_error (void* err_file, const char* format, ...);
 
 #endif
