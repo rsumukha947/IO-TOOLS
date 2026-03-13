@@ -73,6 +73,7 @@ typedef enum {
     }
 
 #define safe_fprintf fprintf_s
+
 #endif
 
 #ifdef __linux__
@@ -83,6 +84,7 @@ typedef enum {
     } __attribute__((packed))  struct_name;      \
     }
 #define safe_fprintf fprintf
+
 #endif
 
 extern status_t get_local_time (struct tm* local_time, const char* raw_time);
