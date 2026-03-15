@@ -87,8 +87,9 @@ typedef enum {
 
 #endif
 
-extern status_t get_local_time (struct tm* local_time, const char* raw_time);
-extern void log_info (void* log_file, uint8_t log_level, const char* format, ...);
-extern void log_error (void* err_file, const char* format, ...);
+extern status_t get_local_time(struct tm* local_time, const char* raw_time);
+extern void log_info(void* log_file, uint8_t log_level, char* tool_name, const char* format, ...);
+extern void log_error(void* err_file, char* tool_name, const char* format, ...);
+extern void dump_buffer(void* dump_file, char* tool_name, void* buffer, size_t size);
 
 #endif
