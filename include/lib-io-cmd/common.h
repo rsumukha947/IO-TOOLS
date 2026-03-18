@@ -5,6 +5,7 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#define __STDC_WANT_LIB_EXT1__ 1
 #include <stdint.h>
 #include <string.h>
 #include <stddef.h>
@@ -14,6 +15,11 @@
 #include <time.h>
 #include <stdbool.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#elif __linux__
+#endif
+
 #define BYTES_128                       128
 #define BYTES_256                       256
 #define BYTES_512                       512
@@ -22,6 +28,8 @@
 #define BYTES_4K                        4096
 #define BYTES_8K                        8192
 #define BYTES_16K                       16384
+
+#define MAX_FILE_NAME_LEN               128
 
 #define BIT_1                           1
 #define BIT_8                           8
@@ -72,7 +80,10 @@ typedef enum {
     __pragma(pack(pop))                          \
     }
 
-#define safe_fprintf fprintf_s
+#define safe_fprintf(stream, format, ...)       fprintf_s(stream, format, ##__VA_ARGS__)
+#define safe_memcpy(dest, destsz, src, count)   memcpy_s(dest, destsz, src, count)
+#define safe_memclear(dest, count)              SecureZeroMemory(dest, count)
+#define safe_snprintf(dest, destsz, fmt, ...)   _snprintf_s(dest, destsz, destsz, fmt, ##__VA_ARGS__)
 
 #endif
 
@@ -83,11 +94,15 @@ typedef enum {
             structure                            \
     } __attribute__((packed))  struct_name;      \
     }
-#define safe_fprintf fprintf
+
+#define safe_fprintf(stream, format, ...)       fprintf(stream, format, ##__VA_ARGS__)
+#define safe_memcpy(dest, destsz, src, count)   memcpy(dest, src, count)
+#define safe_memclear(dest, count)              explicit_bzero(dest, count)
+#define safe_snprintf(dest, destsz, fmt, ...)   snprintf(dest, destsz, fmt, ##__VA_ARGS__)
 
 #endif
 
-extern status_t get_local_time(struct tm* local_time, const char* raw_time);
+extern status_t get_local_time(struct tm* local_time, long long unsigned int* micro_seconds);
 extern void log_info(void* log_file, uint8_t log_level, char* tool_name, const char* format, ...);
 extern void log_error(void* err_file, char* tool_name, const char* format, ...);
 extern void dump_buffer(void* dump_file, char* tool_name, void* buffer, size_t size);

@@ -1,17 +1,21 @@
 {
     "env" : {
-            "includePath" : ["${workspaceFolder/include}"]
+            "includepath" : [ "${workspaceFolder/include}",
+                              "C:\\Program Files (x86)\\Windows Kits\\10\\Include"
+                            ]
     },
     "configurations": [
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "C:\\Program Files (x86)\\Windows Kits\\10\\Include"
             ],
             "defines": [
                 "_DEBUG",
                 "UNICODE",
-                "_UNICODE"
+                "_UNICODE",
+                "__STDC_WANT_LIB_EXT1__=1"
             ],
             "windowsSdkVersion": "10.0.26100.0",
             "compilerPath": "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/cl.exe",
