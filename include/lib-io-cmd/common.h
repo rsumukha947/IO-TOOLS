@@ -14,11 +14,14 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #elif __linux__
 #endif
+
+#define ASSERT(expr) assert(expr)
 
 #define BYTES_128                       128
 #define BYTES_256                       256
@@ -37,15 +40,13 @@
 #define BIT_32                          32
 #define BIT_64                          64
 
-#define BIT_8_RIGHT_SHIFT(x)            (x >> 8)
-#define BIT_16_RIGHT_SHIFT(x)           (x >> 16)
-#define BIT_32_RIGHT_SHIFT(x)           (x >> 32)
-#define BIT_64_RIGHT_SHIFT(x)           (x >> 64)
+#define BIT_8_RIGHT_SHIFT(x)            ((x) >> 8)
+#define BIT_16_RIGHT_SHIFT(x)           ((x) >> 16)
+#define BIT_32_RIGHT_SHIFT(x)           (ASSERT(sizeof(x) >= 8), (x) >> 32)
 
-#define BIT_8_LEFT_SHIFT(x)             (x << 8)
-#define BIT_16_LEFT_SHIFT(x)            (x << 16)
-#define BIT_32_LEFT_SHIFT(x)            (x << 32)
-#define BIT_64_LEFT_SHIFT(x)            (x << 64)
+#define BIT_8_LEFT_SHIFT(x)             ((x) << 8)
+#define BIT_16_LEFT_SHIFT(x)            ((x) << 16)
+#define BIT_32_LEFT_SHIFT(x)            (ASSERT(sizeof(x) >= 8), (x) << 32)
 
 #define KB_SHIFT                        10
 #define MB_SHIFT                        20
@@ -55,20 +56,39 @@
 #define MB(x)                           ((x) << (MB_SHIFT))
 #define GB(x)                           ((x) << (GB_SHIFT))
 
-#define LIL_END_TO_BIG_END_16(x)        ((BIT_8_RIGHT_SHIFT(x) & 0xFF) | (BIT_8_LEFT_SHIFT(x) & 0xFF))
-#define LIL_END_TO_BIG_END_24(x)        (((BIT_16_LEFT_SHIFT(x)) & 0xFF) | (BIT_16_RIGHT_SHIFT(x) & 0xFF))
-#define LIL_END_TO_BIG_END_32(x)        ((LIL_END_TO_BIG_END_16(BIT_16_RIGHT_SHIFT(x)) & 0xFFFF) | (LIL_END_TO_BIG_END_16(BIT_16_LEFT_SHIFT(x)) & 0xFFFF))
-#define LIL_END_TO_BIG_END_64(x)        ((LIL_END_TO_BIG_END_32(BIT_32_RIGHT_SHIFT(x)) & 0xFFFFFFFF) | (LIL_END_TO_BIG_END_32(BIT_32_LEFT_SHIFT(x)) & 0xFFFFFFFF))
+#define LIL_END_TO_BIG_END_16(x)        ((BIT_8_RIGHT_SHIFT(x) & 0x00FFU) | (BIT_8_LEFT_SHIFT(x) & 0xFF00U))
+#define LIL_END_TO_BIG_END_24(x)        (((BIT_16_LEFT_SHIFT(x)) & 0xFF0000U) | ((x) & 0x00FF00U) | (BIT_16_RIGHT_SHIFT(x) & 0x0000FF))
+#define LIL_END_TO_BIG_END_32(x)        ((LIL_END_TO_BIG_END_16(BIT_16_RIGHT_SHIFT(x)) & 0x0000FFFF) | (BIT_16_LEFT_SHIFT(LIL_END_TO_BIG_END_16(x)) & 0xFFFF0000))
+#define LIL_END_TO_BIG_END_64(x)        ((LIL_END_TO_BIG_END_32(BIT_32_RIGHT_SHIFT(x)) & 0x00000000FFFFFFFF) | (BIT_32_LEFT_SHIFT(LIL_END_TO_BIG_END_32(x)) & 0xFFFFFFFF00000000))
 
 #define BIG_END_TO_LIL_END_16(x)        LIL_END_TO_BIG_END_16(x)
 #define BIG_END_TO_LIL_END_24(x)        LIL_END_TO_BIG_END_24(x)
 #define BIG_END_TO_LIL_END_32(x)        LIL_END_TO_BIG_END_32(x)
 #define BIG_END_TO_LIL_END_64(x)        LIL_END_TO_BIG_END_64(x)
 
+#define DEFAULT_LOG_FILE                stdout
+#define DEFAULT_ERROR_LOG_FILE          stderr
+#define DEFAULT_INPUT_FILE              stdin
+#define DEFAULT_OUTPUT_FILE             stdout
+#define DEFAULT_DUMP_FILE               DEFAULT_LOG_FILE
+#define DEFAULT_LOG_LEVEL               4
+
 typedef enum {
     TE_FAIL = 0,
     TE_PASS = 1
 } status_t;
+
+typedef struct {
+    FILE* log_file_p;
+    FILE* err_file_p;
+    FILE* dump_file_p;
+    char  log_file[MAX_FILE_NAME_LEN];
+    char  err_file[MAX_FILE_NAME_LEN];
+    char  tool_name[MAX_FILE_NAME_LEN];
+    char  dump_file[MAX_FILE_NAME_LEN];
+    uint8_t log_level;
+    bool  use_dump;
+} log_err_dump_t;
 
 #ifdef _WIN32
 
@@ -102,9 +122,11 @@ typedef enum {
 
 #endif
 
-extern status_t get_local_time(struct tm* local_time, long long unsigned int* micro_seconds);
-extern void log_info(void* log_file, uint8_t log_level, char* tool_name, const char* format, ...);
-extern void log_error(void* err_file, char* tool_name, const char* format, ...);
-extern void dump_buffer(void* dump_file, char* tool_name, void* buffer, size_t size);
+status_t get_local_time(struct tm* local_time, long long unsigned int* micro_seconds);
+void log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_file, char *dump_file, char* tool_name);
+void log_info(log_err_dump_t* log, uint8_t log_level, const char* format, ...);
+void log_error(log_err_dump_t* err, const char* format, ...);
+void log_err_dump_close(log_err_dump_t* log_err_dump);
+void dump_buffer(log_err_dump_t* dump, void* buffer, size_t size);
 
 #endif
