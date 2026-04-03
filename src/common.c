@@ -20,6 +20,7 @@ status_t get_local_time(struct tm* local_time, long long unsigned int* micro_sec
 
     GetSystemTimePreciseAsFileTime(&ft);
     if (!FileTimeToSystemTime(&ft, &st)) {
+        printf("%s, Failed to convert FilTime to SystemTime: error=%lu\n", __func__,  GetLastError());
         return TE_FAIL;
     }
 
@@ -44,9 +45,11 @@ status_t get_local_time(struct tm* local_time, long long unsigned int* micro_sec
 
     struct timespec ts;
     if (-1 == clock_gettime(CLOCK_REALTIME, &ts)) {
+        printf("%s: %s Failed to get time using clock_gettime: error=%d\n", __func__, ERR, errno);
         return TE_FAIL;
     }
     if (NULL == localtime_r(&ts.tv_sec, local_time)) {
+        printf("%s: %s Failed to convert time using localtime_r: error=%d\n", __func__, ERR, errno);
         return TE_FAIL;
     }
     *micro_seconds = (ts.tv_nsec / 1000); // Convert nanoseconds to microseconds
@@ -68,33 +71,33 @@ void log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_f
         safe_snprintf(log_err_dump->tool_name, MAX_FILE_NAME_LEN, "Unknown Tool");
     }
     if(NULL == log_file) {
-        printf("[Timer not started yet]: Log file is NULL, defaulting to stdout.\n");
+        printf("[Timer not started yet]: %s: %s Log file is NULL, defaulting to stdout.\n", __func__, WARN);
         log_err_dump->log_file_p = DEFAULT_LOG_FILE;
     } else {
         if (NULL == (log_err_dump->log_file_p = fopen(log_file, "a"))) {
-            printf("[Timer not started yet]: Unable to open log file, defaulting to stdout.\n");
+            printf("[Timer not started yet]: %s: %s Unable to open log file, defaulting to stdout.\n", __func__, ERR);
             log_err_dump->log_file_p = DEFAULT_LOG_FILE;
         } else {
             safe_snprintf(log_err_dump->log_file, MAX_FILE_NAME_LEN, log_file);
         }
     }
     if(NULL == err_file) {
-        printf("[Timer not started yet]: Error file is NULL, defaulting to stderr.\n");
+        printf("[Timer not started yet]: %s: %s Error file is NULL, defaulting to stderr.\n", __func__, WARN);
         log_err_dump->err_file_p = DEFAULT_ERROR_LOG_FILE;
     } else {
         if (NULL == (log_err_dump->err_file_p = fopen(err_file, "a"))) {
-            printf("[Timer not started yet]: Unable to open error file, defaulting to stderr.\n");
+            printf("[Timer not started yet]: %s: %s Unable to open error file, defaulting to stderr.\n", __func__, ERR);
             log_err_dump->err_file_p = DEFAULT_ERROR_LOG_FILE;
         } else {
             safe_snprintf(log_err_dump->err_file, MAX_FILE_NAME_LEN, err_file);
         }
     }
     if(NULL == dump_file) {
-        printf("[Timer not started yet]: Dump file is NULL, defaulting to stdout.\n");
+        printf("[Timer not started yet]: %s: %s Dump file is NULL, defaulting to stdout.\n", __func__, WARN);
         log_err_dump->dump_file_p = DEFAULT_DUMP_FILE;
     } else {
         if(NULL == (log_err_dump->dump_file_p = fopen(dump_file, "a"))) {
-            printf("[Timer not started yet]: Unable to open dump file, defaulting to stdout.\n");
+            printf("[Timer not started yet]: %s: %s Unable to open dump file, defaulting to stdout.\n", __func__, ERR);
             log_err_dump->dump_file_p = DEFAULT_DUMP_FILE;
         } else {
             safe_snprintf(log_err_dump->dump_file, MAX_FILE_NAME_LEN, dump_file);
@@ -147,7 +150,7 @@ void dump_buffer(log_err_dump_t* dump, void* buffer, size_t size) {
     uint32_t i = 0; uint8_t j = 0; uint64_t low = 0, high = 0;
     char str[BIT_16 + 1] = {0}; uint8_t* buffer_p = (uint8_t*)buffer;
     dump->use_dump = true;
-    log_info(dump, 0, "Address \t\t\t\t\t\t\t\tData(Hex) \t\t\t\t\t\t\tASCII");
+    log_info(dump, 0, "Address \t\t\t\t\t\t\t\tData(Hex) \t\t\t\t\t\t\tASCII\n");
     while (size > i) {
 
         low = high = 0;
@@ -169,7 +172,7 @@ void dump_buffer(log_err_dump_t* dump, void* buffer, size_t size) {
                 }
             }
             safe_memcpy(str, sizeof(str), (buffer_p + idx), diff_len);
-            log_info(dump, 0, "0x%016llx \t0x%016llx%016llx \t%s", (uint32_t)(i), low, high, str);
+            log_info(dump, 0, "%s 0x%016llx \t0x%016llx%016llx \t%s", DUMP, (uint32_t)(i), low, high, str);
             dump->use_dump = false;
             return;
         } else {
@@ -180,13 +183,14 @@ void dump_buffer(log_err_dump_t* dump, void* buffer, size_t size) {
             safe_memcpy(str, sizeof(str), (buffer_p + i), BIT_16);
         }
 
-        log_info(dump, 0, "0x%016llx \t0x%016llx%016llx \t%s", (uint32_t)(i), low, high, str);
+        log_info(dump, 0, "%s 0x%016llx \t0x%016llx%016llx \t%s", DUMP, (uint32_t)(i), low, high, str);
         i += 16;
     }
     dump->use_dump = false;
 }
 
 void log_err_dump_close(log_err_dump_t* log_err_dump) {
+
     if (log_err_dump->log_file_p && log_err_dump->log_file_p != DEFAULT_LOG_FILE) {
         fclose(log_err_dump->log_file_p);
     }
@@ -195,5 +199,25 @@ void log_err_dump_close(log_err_dump_t* log_err_dump) {
     }
     if (log_err_dump->dump_file_p && log_err_dump->dump_file_p != DEFAULT_DUMP_FILE) {
         fclose(log_err_dump->dump_file_p);
+    }
+}
+
+bool alligned_buffer_alloc(size_t size, size_t alignment, void* ptr) {
+
+    if ((size == 0 || alignment == 0) && (alignment <= size) && (0 != (size % alignment))) {
+        printf("%s: %s Invalid input for size=%zu and alignment=%zu\n", __func__, ERR, size, alignment);
+        return false;
+    }
+    if (NULL == (ptr = alligned_mem_alloc(size, alignment))) {
+        printf("%s: %s Memory allocation failed for size=%zu and alignment=%zu\n", __func__, ERR, size, alignment);
+        return false;
+    }
+
+    return true;
+}
+
+void aligned_buffer_free(void* ptr) {
+    if (ptr) {
+        alligned_mem_free(ptr);
     }
 }
