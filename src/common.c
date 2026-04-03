@@ -45,11 +45,11 @@ status_t get_local_time(struct tm* local_time, long long unsigned int* micro_sec
 
     struct timespec ts;
     if (-1 == clock_gettime(CLOCK_REALTIME, &ts)) {
-        printf("%s: %s Failed to get time using clock_gettime: error=%d\n", __func__, ERR, errno);
+        printf("%s: %s Failed to get time using clock_gettime: errno=%d\n", __func__, ERR, errno);
         return TE_FAIL;
     }
     if (NULL == localtime_r(&ts.tv_sec, local_time)) {
-        printf("%s: %s Failed to convert time using localtime_r: error=%d\n", __func__, ERR, errno);
+        printf("%s: %s Failed to convert time using localtime_r: errno=%d\n", __func__, ERR, errno);
         return TE_FAIL;
     }
     *micro_seconds = (ts.tv_nsec / 1000); // Convert nanoseconds to microseconds
@@ -75,7 +75,7 @@ void log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_f
         log_err_dump->log_file_p = DEFAULT_LOG_FILE;
     } else {
         if (NULL == (log_err_dump->log_file_p = fopen(log_file, "a"))) {
-            printf("[Timer not started yet]: %s: %s Unable to open log file, defaulting to stdout.\n", __func__, ERR);
+            printf("[Timer not started yet]: %s: %s Unable to open log file errno=%d, defaulting to stdout.\n", __func__, WARN, errno);
             log_err_dump->log_file_p = DEFAULT_LOG_FILE;
         } else {
             safe_snprintf(log_err_dump->log_file, MAX_FILE_NAME_LEN, log_file);
@@ -86,7 +86,7 @@ void log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_f
         log_err_dump->err_file_p = DEFAULT_ERROR_LOG_FILE;
     } else {
         if (NULL == (log_err_dump->err_file_p = fopen(err_file, "a"))) {
-            printf("[Timer not started yet]: %s: %s Unable to open error file, defaulting to stderr.\n", __func__, ERR);
+            printf("[Timer not started yet]: %s: %s Unable to open error file errno=%d, defaulting to stderr.\n", __func__, WARN, errno);
             log_err_dump->err_file_p = DEFAULT_ERROR_LOG_FILE;
         } else {
             safe_snprintf(log_err_dump->err_file, MAX_FILE_NAME_LEN, err_file);
@@ -97,7 +97,7 @@ void log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_f
         log_err_dump->dump_file_p = DEFAULT_DUMP_FILE;
     } else {
         if(NULL == (log_err_dump->dump_file_p = fopen(dump_file, "a"))) {
-            printf("[Timer not started yet]: %s: %s Unable to open dump file, defaulting to stdout.\n", __func__, ERR);
+            printf("[Timer not started yet]: %s: %s Unable to open dump file errno=%d, defaulting to stdout.\n", __func__, ERR, errno);
             log_err_dump->dump_file_p = DEFAULT_DUMP_FILE;
         } else {
             safe_snprintf(log_err_dump->dump_file, MAX_FILE_NAME_LEN, dump_file);
@@ -209,7 +209,7 @@ bool alligned_buffer_alloc(size_t size, size_t alignment, void* ptr) {
         return false;
     }
     if (NULL == (ptr = alligned_mem_alloc(size, alignment))) {
-        printf("%s: %s Memory allocation failed for size=%zu and alignment=%zu\n", __func__, ERR, size, alignment);
+        printf("%s: %s Memory allocation failed for errno=%d, size=%zu and alignment=%zu\n", __func__, ERR, errno, size, alignment);
         return false;
     }
 
