@@ -150,6 +150,7 @@ void dump_buffer(log_err_dump_t* dump, void* buffer, size_t size) {
     uint32_t i = 0; uint8_t j = 0; uint64_t low = 0, high = 0;
     char str[BIT_16 + 1] = {0}; uint8_t* buffer_p = (uint8_t*)buffer;
     dump->use_dump = true;
+
     log_info(dump, 0, "Address \t\t\t\t\t\t\t\tData(Hex) \t\t\t\t\t\t\tASCII\n");
     while (size > i) {
 
@@ -202,14 +203,14 @@ void log_err_dump_close(log_err_dump_t* log_err_dump) {
     }
 }
 
-bool alligned_buffer_alloc(size_t size, size_t alignment, void* ptr) {
+bool alligned_buffer_alloc(log_err_dump_t* log_err_dump, size_t size, size_t alignment, void* ptr) {
 
     if ((size == 0 || alignment == 0) && (alignment <= size) && (0 != (size % alignment))) {
-        printf("%s: %s Invalid input for size=%zu and alignment=%zu\n", __func__, ERR, size, alignment);
+        log_error(log_err_dump, "Invalid input for size=%zu and alignment=%zu", size, alignment);
         return false;
     }
     if (NULL == (ptr = alligned_mem_alloc(size, alignment))) {
-        printf("%s: %s Memory allocation failed for errno=%d, size=%zu and alignment=%zu\n", __func__, ERR, errno, size, alignment);
+        log_error(log_err_dump, "Memory allocation failed for errno=%d, size=%zu and alignment=%zu", errno, size, alignment);
         return false;
     }
 
@@ -220,4 +221,37 @@ void aligned_buffer_free(void* ptr) {
     if (ptr) {
         alligned_mem_free(ptr);
     }
+}
+
+bool get_ascii_devname(log_err_dump_t* log_err_dump, const char* devname, size_t size, char* ascii_devname, slash_type_t slash_type) {
+
+    char* context = NULL, *token = NULL;
+    char slash = (slash_type == BACK_SLASH) ? '\\' : '/';
+    char ascii_name[MAX_FILE_NAME_LEN] = {0};
+
+    if ( NULL == devname || size < 0 || NULL == ascii_devname ) {
+        log_error(log_err_dump, "Invalid input for devname=%p, size=%zu, ascii_devname=%p", devname, size, ascii_devname);
+        return false;
+    }
+    safe_memclear(ascii_devname, sizeof(ascii_devname));
+    if ((NULL != strstr(devname, "\\\\.\\"))) {
+        safe_snprintf(ascii_name, MAX_FILE_NAME_LEN, "%s%s.%s%s", slash, slash,slash, (devname + strlen("\\\\.\\")));
+        goto done;
+    }
+    if (slash == devname[0]) {
+        snprintf(ascii_name, MAX_FILE_NAME_LEN, "%c", slash);
+    }
+    token = safe_strtok((char*)devname, &slash, &context);
+    if (NULL == token) {
+        log_error(log_err_dump, "Failed to tokenize devname=%p for delimiter=%c", devname, slash);
+        return false;
+    }
+    while(token) {
+        token = safe_strtok(NULL, &slash, &context);
+        safe_snprintf(ascii_name, MAX_FILE_NAME_LEN, "%s%s%s", ascii_name, token, slash);
+    }
+    ascii_name[strlen(ascii_name) - 1] = '\0'; // Remove the trailing slash
+done:
+    log_info(log_err_dump, 4, "Device name %s converted to ascii name %s\n", token, ascii_name);
+    return true;
 }

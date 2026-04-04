@@ -21,6 +21,7 @@
 /* Platform-Specific Includes */
 #ifdef _WIN32
 #include <windows.h>
+#include <fileapi.h>
 #elif __linux__
 #include <malloc.h>
 #endif
@@ -158,6 +159,11 @@ typedef struct {
     bool    use_dump;
 } log_err_dump_t;
 
+typedef enum {
+    BACK_SLASH = 0,
+    FORWARD_SLASH
+} slash_type_t;
+
 /* ========================================================================
  * Platform-Specific Helper Macros
  * ======================================================================== */
@@ -191,6 +197,12 @@ typedef struct {
 #define alligned_mem_free(ptr)                      \
     _aligned_free(ptr)
 
+#define safe_strtok(str, delim, context)            \
+    strtok_s(str, delim, context)
+
+#define safe_strncat(dest, destsz, src, count)      \
+    strncat_s(dest, destsz, src, count)
+
 #endif /* _WIN32 */
 
 #ifdef __linux__
@@ -220,6 +232,11 @@ typedef struct {
 #define alligned_mem_free(ptr)                      \
     free(ptr)
 
+#define safe_strtok(str, delim, context)            \
+    strtok_r(str, delim, &context)
+
+#define safe_strncat(dest, destsz, src, count)      \
+    strncat(dest, destsz, src, count)
 #endif /* __linux__ */
 
 /* ========================================================================
@@ -255,5 +272,9 @@ bool aligned_buffer_alloc(size_t size,
                            void* ptr);
 
 void aligned_buffer_free(void* ptr);
+
+char* get_ascii_devname(const char* path,
+                         size_t size, 
+                         slash_type_t slash_type);
 
 #endif /* COMMON_H */
