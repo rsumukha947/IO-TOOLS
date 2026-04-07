@@ -21,9 +21,10 @@
 /* Platform-Specific Includes */
 #ifdef _WIN32
 #include <windows.h>
-#include <fileapi.h>
 #elif __linux__
+#include <unistd.h>
 #include <malloc.h>
+#include <fcntl.h>
 #endif
 
 /* ========================================================================
@@ -164,6 +165,19 @@ typedef enum {
     FORWARD_SLASH
 } slash_type_t;
 
+typedef struct {
+    char        devname[MAX_FILE_NAME_LEN];
+#ifdef _WIN32
+    HANDLE      fd;
+#elif __linux__
+    int         fd;
+#endif
+    uint64_t    device_bytes_size;
+    uint32_t    physical_sector_size;
+    uint32_t    device_sector_size;
+
+} device_t;
+
 /* ========================================================================
  * Platform-Specific Helper Macros
  * ======================================================================== */
@@ -203,6 +217,16 @@ typedef enum {
 #define safe_strncat(dest, destsz, src, count)      \
     strncat_s(dest, destsz, src, count)
 
+typedef struct {
+    LPCWSTR        devname[MAX_FILE_NAME_LEN];
+    DWORD          desired_access_mode;
+    DWORD          share_mode;
+    LPSECURITY_ATTRIBUTES security_attributes;
+    DWORD          creation_disposition;
+    DWORD          flags_and_attributes;
+    HANDLE         template_file;
+} device_open_t;
+
 #endif /* _WIN32 */
 
 #ifdef __linux__
@@ -237,13 +261,20 @@ typedef enum {
 
 #define safe_strncat(dest, destsz, src, count)      \
     strncat(dest, destsz, src, count)
+
+
+typedef struct {
+    char*       devname;
+    int         flags;
+} device_open_t;
+
 #endif /* __linux__ */
 
 /* ========================================================================
  * Function Declarations
  * ======================================================================== */
 
-status_t get_local_time(struct tm* local_time,
+bool get_local_time(struct tm* local_time,
                         long long unsigned int* micro_seconds);
 
 void log_err_dump_init(log_err_dump_t* log_err_dump,
@@ -268,13 +299,21 @@ void dump_buffer(log_err_dump_t* dump,
                  size_t size);
 
 bool aligned_buffer_alloc(size_t size,
-                           size_t alignment,
-                           void* ptr);
+                          size_t alignment,
+                          void* ptr);
 
 void aligned_buffer_free(void* ptr);
 
-char* get_ascii_devname(const char* path,
-                         size_t size, 
-                         slash_type_t slash_type);
+bool get_ascii_devname(log_err_dump_t* log_err_dump,
+                       const char* devname,
+                       size_t size,
+                       char* ascii_devname,
+                       slash_type_t slash_type);
+
+bool open_device(log_err_dump_t *log_err_dump, 
+                 device_open_t* dev_attr,
+                 void* handle);
+
+void close_device(void* handle);
 
 #endif /* COMMON_H */

@@ -11,7 +11,7 @@
  * @param [in] raw_time 
  * @return status_t
  */
-status_t get_local_time(struct tm* local_time, long long unsigned int* micro_seconds) {
+bool get_local_time(struct tm* local_time, long long unsigned int* micro_seconds) {
 
 #ifdef _WIN32
 
@@ -21,7 +21,7 @@ status_t get_local_time(struct tm* local_time, long long unsigned int* micro_sec
     GetSystemTimePreciseAsFileTime(&ft);
     if (!FileTimeToSystemTime(&ft, &st)) {
         printf("%s, Failed to convert FilTime to SystemTime: error=%lu\n", __func__,  GetLastError());
-        return TE_FAIL;
+        return false;
     }
 
     ULARGE_INTEGER uli;
@@ -46,11 +46,11 @@ status_t get_local_time(struct tm* local_time, long long unsigned int* micro_sec
     struct timespec ts;
     if (-1 == clock_gettime(CLOCK_REALTIME, &ts)) {
         printf("%s: %s Failed to get time using clock_gettime: errno=%d\n", __func__, ERR, errno);
-        return TE_FAIL;
+        return false;
     }
     if (NULL == localtime_r(&ts.tv_sec, local_time)) {
         printf("%s: %s Failed to convert time using localtime_r: errno=%d\n", __func__, ERR, errno);
-        return TE_FAIL;
+        return false;
     }
     *micro_seconds = (ts.tv_nsec / 1000); // Convert nanoseconds to microseconds
     local_time->tm_year += 1900; // Adjust year to be since 1900
@@ -58,19 +58,19 @@ status_t get_local_time(struct tm* local_time, long long unsigned int* micro_sec
 
 #endif
 
-    return TE_PASS;
+    return true;
 }
 
 void log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_file, char *dump_file, char* tool_name) {
 
     safe_memclear(log_err_dump, sizeof(log_err_dump_t));
 
-    if(NULL != tool_name) {
+    if (NULL != tool_name) {
         safe_snprintf(log_err_dump->tool_name, MAX_FILE_NAME_LEN, tool_name);
     } else {
         safe_snprintf(log_err_dump->tool_name, MAX_FILE_NAME_LEN, "Unknown Tool");
     }
-    if(NULL == log_file) {
+    if (NULL == log_file) {
         printf("[Timer not started yet]: %s: %s Log file is NULL, defaulting to stdout.\n", __func__, WARN);
         log_err_dump->log_file_p = DEFAULT_LOG_FILE;
     } else {
@@ -81,7 +81,7 @@ void log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_f
             safe_snprintf(log_err_dump->log_file, MAX_FILE_NAME_LEN, log_file);
         }
     }
-    if(NULL == err_file) {
+    if (NULL == err_file) {
         printf("[Timer not started yet]: %s: %s Error file is NULL, defaulting to stderr.\n", __func__, WARN);
         log_err_dump->err_file_p = DEFAULT_ERROR_LOG_FILE;
     } else {
@@ -92,7 +92,7 @@ void log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_f
             safe_snprintf(log_err_dump->err_file, MAX_FILE_NAME_LEN, err_file);
         }
     }
-    if(NULL == dump_file) {
+    if (NULL == dump_file) {
         printf("[Timer not started yet]: %s: %s Dump file is NULL, defaulting to stdout.\n", __func__, WARN);
         log_err_dump->dump_file_p = DEFAULT_DUMP_FILE;
     } else {
@@ -151,6 +151,11 @@ void dump_buffer(log_err_dump_t* dump, void* buffer, size_t size) {
     char str[BIT_16 + 1] = {0}; uint8_t* buffer_p = (uint8_t*)buffer;
     dump->use_dump = true;
 
+    if (NULL == buffer || 0 == size) {
+        log_error(dump, "%s: %s Invalid value for (addr)buffer=%p and size=%zu", __func__, ERR, buffer, size);
+        return;
+    }
+
     log_info(dump, 0, "Address \t\t\t\t\t\t\t\tData(Hex) \t\t\t\t\t\t\tASCII\n");
     while (size > i) {
 
@@ -206,11 +211,11 @@ void log_err_dump_close(log_err_dump_t* log_err_dump) {
 bool alligned_buffer_alloc(log_err_dump_t* log_err_dump, size_t size, size_t alignment, void* ptr) {
 
     if ((size == 0 || alignment == 0) && (alignment <= size) && (0 != (size % alignment))) {
-        log_error(log_err_dump, "Invalid input for size=%zu and alignment=%zu", size, alignment);
+        log_error(log_err_dump, "%s: %s Invalid input for size=%zu and alignment=%zu", __func__, ERR, size, alignment);
         return false;
     }
     if (NULL == (ptr = alligned_mem_alloc(size, alignment))) {
-        log_error(log_err_dump, "Memory allocation failed for errno=%d, size=%zu and alignment=%zu", errno, size, alignment);
+        log_error(log_err_dump, "%s: %s Memory allocation failed for errno=%d, size=%zu and alignment=%zu", __func__, ERR, errno, size, alignment);
         return false;
     }
 
@@ -218,6 +223,7 @@ bool alligned_buffer_alloc(log_err_dump_t* log_err_dump, size_t size, size_t ali
 }
 
 void aligned_buffer_free(void* ptr) {
+
     if (ptr) {
         alligned_mem_free(ptr);
     }
@@ -230,7 +236,7 @@ bool get_ascii_devname(log_err_dump_t* log_err_dump, const char* devname, size_t
     char ascii_name[MAX_FILE_NAME_LEN] = {0};
 
     if ( NULL == devname || size < 0 || NULL == ascii_devname ) {
-        log_error(log_err_dump, "Invalid input for devname=%p, size=%zu, ascii_devname=%p", devname, size, ascii_devname);
+        log_error(log_err_dump, "%s: %s Invalid input for devname=%p, size=%zu, ascii_devname=%p", __func__, ERR, devname, size, ascii_devname);
         return false;
     }
     safe_memclear(ascii_devname, sizeof(ascii_devname));
@@ -243,15 +249,59 @@ bool get_ascii_devname(log_err_dump_t* log_err_dump, const char* devname, size_t
     }
     token = safe_strtok((char*)devname, &slash, &context);
     if (NULL == token) {
-        log_error(log_err_dump, "Failed to tokenize devname=%p for delimiter=%c", devname, slash);
+        log_error(log_err_dump, "%s: %s Failed to tokenize devname=%p for delimiter=%c", __func__, ERR, devname, slash);
         return false;
     }
-    while(token) {
+    while (token) {
         token = safe_strtok(NULL, &slash, &context);
         safe_snprintf(ascii_name, MAX_FILE_NAME_LEN, "%s%s%s", ascii_name, token, slash);
     }
     ascii_name[strlen(ascii_name) - 1] = '\0'; // Remove the trailing slash
 done:
-    log_info(log_err_dump, 4, "Device name %s converted to ascii name %s\n", token, ascii_name);
+    log_info(log_err_dump, 4, "%s: %s Device name %s converted to ascii name %s\n", __func__, INFO, token, ascii_name);
     return true;
+}
+
+bool open_device(log_err_dump_t *log_err_dump, device_open_t* dev_attr, void* handle) {
+
+    if (NULL == dev_attr->devname || NULL == dev_attr) {
+        log_error(log_err_dump, "%s: %s Invalid input for devname=%s and (addr)dev_attr=%p", __func__, ERR, dev_attr->devname, dev_attr);
+        return false;
+    }
+
+#ifdef _WIN32
+    HANDLE* handle_p = (HANDLE*)handle;
+    if (INVALID_HANDLE_VALUE == (*handle_p = CreateFileW(dev_attr->devname,
+                                                         dev_attr->desired_access_mode,
+                                                         dev_attr->share_mode,
+                                                         dev_attr->security_attributes,
+                                                         dev_attr->creation_disposition,
+                                                         dev_attr->flags_and_attributes,
+                                                         dev_attr->template_file))) {
+
+        log_error(log_err_dump, "%s: %s Failed to open device %s with errno=%lu", __func__, ERR, dev_attr->devname, GetLastError());
+        return false;
+    }
+#elif __linux__
+    int* fd_p = (int*) handle;
+    if (-1 == (*fd_p = open(dev_attr->devname, dev_attr->flags))) {
+        log_error(log_err_dump, "%s: %s Failed to open device %s with errno=%d", __func__, ERR, dev_attr->devname, errno);
+    }
+#endif
+
+    log_info(log_err_dump, 4, "%s: %s Device %s opened successfully handle=%p", __func__, INFO, dev_attr->devname, *handle_p);
+    return true;
+}
+
+void close_device(void* handle) {
+
+#ifdef _WIN32
+    if ((HANDLE*) handle) {
+        closeHandle((HANDLE*) *handle);
+#elif __linux__
+    if ((int *) handle) {
+        close((int*) *handle);
+#endif
+    }
+
 }
