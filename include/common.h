@@ -184,7 +184,19 @@ typedef struct {
 
 #ifdef _WIN32
 
-#define pack_structure(structure, struct_name)      \
+#define ATTR_EXPORT                                 \
+    __declspec(dllexport)
+
+#define ATTR_IMPORT                                 \
+    __declspec(dllimport)
+
+#define ATTR_ALIGN(n)                               \
+    __declspec(align(n))
+
+#define NO_RETURN                                   \
+    __declspec(noreturn)
+
+#define ATTR_PACKED_STRUCT(struct_name, structure)  \
     {                                               \
         __pragma(pack(push, 1))                     \
         typedef struct {                            \
@@ -193,28 +205,28 @@ typedef struct {
         __pragma(pack(pop))                         \
     }
 
-#define safe_fprintf(stream, format, ...)           \
+#define SAFE_FPRINTF(stream, format, ...)           \
     fprintf_s(stream, format, ##__VA_ARGS__)
 
-#define safe_memcpy(dest, destsz, src, count)       \
+#define SAFE_MEMCPY(dest, destsz, src, count)       \
     memcpy_s(dest, destsz, src, count)
 
-#define safe_memclear(dest, count)                  \
+#define SAFE_MEMCLEAR(dest, count)                  \
     SecureZeroMemory(dest, count)
 
-#define safe_snprintf(dest, destsz, fmt, ...)       \
+#define SAFE_SNPRINTF(dest, destsz, fmt, ...)       \
     _snprintf_s(dest, destsz, destsz, fmt, ##__VA_ARGS__)
 
-#define alligned_mem_alloc(size, alignment)         \
+#define ALIGNED_MEM_ALLOC(size, alignment)          \
     _aligned_malloc(size, alignment)
 
-#define alligned_mem_free(ptr)                      \
+#define ALIGNED_MEM_FREE(ptr)                       \
     _aligned_free(ptr)
 
-#define safe_strtok(str, delim, context)            \
+#define SAFE_STRTOK(str, delim, context)            \
     strtok_s(str, delim, context)
 
-#define safe_strncat(dest, destsz, src, count)      \
+#define SAFE_STRNCAT(dest, destsz, src, count)      \
     strncat_s(dest, destsz, src, count)
 
 typedef struct {
@@ -231,35 +243,38 @@ typedef struct {
 
 #ifdef __linux__
 
-#define pack_structure(structure, struct_name)      \
+#define ATTR_ALIGN(n)                               \
+    __attribute__((aligned(n)))
+
+#define ATTR_PACKED_STRUCT(struct_name, structure)  \
     {                                               \
         typedef struct {                            \
             structure                               \
-        } __attribute__((packed)) struct_name;      \
+        } struct_name __attribute__((packed));      \
     }
 
-#define safe_fprintf(stream, format, ...)           \
+#define SAFE_FPRINTF(stream, format, ...)           \
     fprintf(stream, format, ##__VA_ARGS__)
 
-#define safe_memcpy(dest, destsz, src, count)       \
+#define SAFE_MEMCPY(dest, destsz, src, count)       \
     memcpy(dest, src, count)
 
-#define safe_memclear(dest, count)                  \
+#define SAFE_MEMCLEAR(dest, count)                  \
     explicit_bzero(dest, count)
 
-#define safe_snprintf(dest, destsz, fmt, ...)       \
+#define SAFE_SNPRINTF(dest, destsz, fmt, ...)       \
     snprintf(dest, destsz, fmt, ##__VA_ARGS__)
 
-#define alligned_mem_alloc(size, alignment)         \
+#define ALIGNED_MEM_ALLOC(size, alignment)          \
     aligned_alloc(alignment, size)
 
-#define alligned_mem_free(ptr)                      \
+#define ALIGNED_MEM_FREE(ptr)                       \
     free(ptr)
 
-#define safe_strtok(str, delim, context)            \
+#define SAFE_STRTOK(str, delim, context)            \
     strtok_r(str, delim, &context)
 
-#define safe_strncat(dest, destsz, src, count)      \
+#define SAFE_STRNCAT(dest, destsz, src, count)      \
     strncat(dest, destsz, src, count)
 
 

@@ -63,12 +63,12 @@ bool get_local_time(struct tm* local_time, long long unsigned int* micro_seconds
 
 void log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_file, char *dump_file, char* tool_name) {
 
-    safe_memclear(log_err_dump, sizeof(log_err_dump_t));
+    SAFE_MEMCLEAR(log_err_dump, sizeof(log_err_dump_t));
 
     if (NULL != tool_name) {
-        safe_snprintf(log_err_dump->tool_name, MAX_FILE_NAME_LEN, tool_name);
+        SAFE_SNPRINTF(log_err_dump->tool_name, MAX_FILE_NAME_LEN, tool_name);
     } else {
-        safe_snprintf(log_err_dump->tool_name, MAX_FILE_NAME_LEN, "Unknown Tool");
+        SAFE_SNPRINTF(log_err_dump->tool_name, MAX_FILE_NAME_LEN, "Unknown Tool");
     }
     if (NULL == log_file) {
         printf("[Timer not started yet]: %s: %s Log file is NULL, defaulting to stdout.\n", __func__, WARN);
@@ -78,7 +78,7 @@ void log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_f
             printf("[Timer not started yet]: %s: %s Unable to open log file errno=%d, defaulting to stdout.\n", __func__, WARN, errno);
             log_err_dump->log_file_p = DEFAULT_LOG_FILE;
         } else {
-            safe_snprintf(log_err_dump->log_file, MAX_FILE_NAME_LEN, log_file);
+            SAFE_SNPRINTF(log_err_dump->log_file, MAX_FILE_NAME_LEN, log_file);
         }
     }
     if (NULL == err_file) {
@@ -89,7 +89,7 @@ void log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_f
             printf("[Timer not started yet]: %s: %s Unable to open error file errno=%d, defaulting to stderr.\n", __func__, WARN, errno);
             log_err_dump->err_file_p = DEFAULT_ERROR_LOG_FILE;
         } else {
-            safe_snprintf(log_err_dump->err_file, MAX_FILE_NAME_LEN, err_file);
+            SAFE_SNPRINTF(log_err_dump->err_file, MAX_FILE_NAME_LEN, err_file);
         }
     }
     if (NULL == dump_file) {
@@ -100,7 +100,7 @@ void log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_f
             printf("[Timer not started yet]: %s: %s Unable to open dump file errno=%d, defaulting to stdout.\n", __func__, ERR, errno);
             log_err_dump->dump_file_p = DEFAULT_DUMP_FILE;
         } else {
-            safe_snprintf(log_err_dump->dump_file, MAX_FILE_NAME_LEN, dump_file);
+            SAFE_SNPRINTF(log_err_dump->dump_file, MAX_FILE_NAME_LEN, dump_file);
         }
     }
  }
@@ -113,14 +113,14 @@ void log_info(log_err_dump_t* log, uint8_t log_level, const char* format, ...) {
     FILE* file_p = (log->use_dump ? log->dump_file_p : log->log_file_p);
 
     if (get_local_time((struct tm*)&local_time, &micro_seconds)) {
-        safe_fprintf(file_p, "{%s}[%02d-%02d-%04d %02d:%02d:%02d.%06llu]: ", log->tool_name, local_time.tm_mday, local_time.tm_mon, local_time.tm_year, local_time.tm_hour, local_time.tm_min, local_time.tm_sec, micro_seconds);
+        SAFE_FPRINTF(file_p, "{%s}[%02d-%02d-%04d %02d:%02d:%02d.%06llu]: ", log->tool_name, local_time.tm_mday, local_time.tm_mon, local_time.tm_year, local_time.tm_hour, local_time.tm_min, local_time.tm_sec, micro_seconds);
     } else {
-        safe_fprintf(file_p, "{%s}[Unable to fetch local time]: ", log->tool_name);
+        SAFE_FPRINTF(file_p, "{%s}[Unable to fetch local time]: ", log->tool_name);
     }
     va_start(args, format);
-    safe_fprintf(file_p, "%d: ", log_level);
+    SAFE_FPRINTF(file_p, "%d: ", log_level);
     vfprintf(file_p, format, args);
-    safe_fprintf(file_p, "\n");
+    SAFE_FPRINTF(file_p, "\n");
     va_end(args);
     fflush(file_p);
 
@@ -133,13 +133,13 @@ void log_error(log_err_dump_t* err, const char* format, ...) {
     struct tm               local_time = {0};
 
     if (get_local_time((struct tm*)&local_time, &micro_seconds)) {
-        safe_fprintf(err->err_file_p, "{%s}[%02d-%02d-%04d %02d:%02d:%02d.%06llu]: ", err->tool_name, local_time.tm_mday, local_time.tm_mon, local_time.tm_year, local_time.tm_hour, local_time.tm_min, local_time.tm_sec, micro_seconds);
+        SAFE_FPRINTF(err->err_file_p, "{%s}[%02d-%02d-%04d %02d:%02d:%02d.%06llu]: ", err->tool_name, local_time.tm_mday, local_time.tm_mon, local_time.tm_year, local_time.tm_hour, local_time.tm_min, local_time.tm_sec, micro_seconds);
     } else {
-        safe_fprintf(err->err_file_p, "{%s}[Unable to fetch local time]: ", err->tool_name);
+        SAFE_FPRINTF(err->err_file_p, "{%s}[Unable to fetch local time]: ", err->tool_name);
     }
     va_start(args, format);
     vfprintf(err->err_file_p, format, args);
-    safe_fprintf(err->err_file_p, "\n");
+    SAFE_FPRINTF(err->err_file_p, "\n");
     va_end(args);
     fflush(err->err_file_p);
 
@@ -160,7 +160,7 @@ void dump_buffer(log_err_dump_t* dump, void* buffer, size_t size) {
     while (size > i) {
 
         low = high = 0;
-        safe_memclear(str, sizeof(str));
+        SAFE_MEMCLEAR(str, sizeof(str));
 
         if (16 > (size - i)) {
             uint8_t diff_len = (uint8_t)(size - i);
@@ -177,7 +177,7 @@ void dump_buffer(log_err_dump_t* dump, void* buffer, size_t size) {
                     high = BIT_8_LEFT_SHIFT(high) | buffer_p[i + j];
                 }
             }
-            safe_memcpy(str, sizeof(str), (buffer_p + idx), diff_len);
+            SAFE_MEMCPY(str, sizeof(str), (buffer_p + idx), diff_len);
             log_info(dump, 0, "%s 0x%016llx \t0x%016llx%016llx \t%s", DUMP, (uint32_t)(i), low, high, str);
             dump->use_dump = false;
             return;
@@ -186,7 +186,7 @@ void dump_buffer(log_err_dump_t* dump, void* buffer, size_t size) {
                 low = BIT_8_LEFT_SHIFT(low) | buffer_p[i + j];
                 high = BIT_8_LEFT_SHIFT(high) | buffer_p[i + j + BIT_8];
             }
-            safe_memcpy(str, sizeof(str), (buffer_p + i), BIT_16);
+            SAFE_MEMCPY(str, sizeof(str), (buffer_p + i), BIT_16);
         }
 
         log_info(dump, 0, "%s 0x%016llx \t0x%016llx%016llx \t%s", DUMP, (uint32_t)(i), low, high, str);
@@ -214,7 +214,7 @@ bool alligned_buffer_alloc(log_err_dump_t* log_err_dump, size_t size, size_t ali
         log_error(log_err_dump, "%s: %s Invalid input for size=%zu and alignment=%zu", __func__, ERR, size, alignment);
         return false;
     }
-    if (NULL == (ptr = alligned_mem_alloc(size, alignment))) {
+    if (NULL == (ptr = ALIGNED_MEM_ALLOC(size, alignment))) {
         log_error(log_err_dump, "%s: %s Memory allocation failed for errno=%d, size=%zu and alignment=%zu", __func__, ERR, errno, size, alignment);
         return false;
     }
@@ -225,7 +225,7 @@ bool alligned_buffer_alloc(log_err_dump_t* log_err_dump, size_t size, size_t ali
 void aligned_buffer_free(void* ptr) {
 
     if (ptr) {
-        alligned_mem_free(ptr);
+        ALIGNED_MEM_FREE(ptr);
     }
 }
 
@@ -239,22 +239,22 @@ bool get_ascii_devname(log_err_dump_t* log_err_dump, const char* devname, size_t
         log_error(log_err_dump, "%s: %s Invalid input for devname=%p, size=%zu, ascii_devname=%p", __func__, ERR, devname, size, ascii_devname);
         return false;
     }
-    safe_memclear(ascii_devname, sizeof(ascii_devname));
+    SAFE_MEMCLEAR(ascii_devname, sizeof(ascii_devname));
     if ((NULL != strstr(devname, "\\\\.\\"))) {
-        safe_snprintf(ascii_name, MAX_FILE_NAME_LEN, "%s%s.%s%s", slash, slash,slash, (devname + strlen("\\\\.\\")));
+        SAFE_SNPRINTF(ascii_name, MAX_FILE_NAME_LEN, "%s%s.%s%s", slash, slash,slash, (devname + strlen("\\\\.\\")));
         goto done;
     }
     if (slash == devname[0]) {
         snprintf(ascii_name, MAX_FILE_NAME_LEN, "%c", slash);
     }
-    token = safe_strtok((char*)devname, &slash, &context);
+    token = SAFE_STRTOK((char*)devname, &slash, &context);
     if (NULL == token) {
         log_error(log_err_dump, "%s: %s Failed to tokenize devname=%p for delimiter=%c", __func__, ERR, devname, slash);
         return false;
     }
     while (token) {
-        token = safe_strtok(NULL, &slash, &context);
-        safe_snprintf(ascii_name, MAX_FILE_NAME_LEN, "%s%s%s", ascii_name, token, slash);
+        token = SAFE_STRTOK(NULL, &slash, &context);
+        SAFE_SNPRINTF(ascii_name, MAX_FILE_NAME_LEN, "%s%s%s", ascii_name, token, slash);
     }
     ascii_name[strlen(ascii_name) - 1] = '\0'; // Remove the trailing slash
 done:
@@ -297,10 +297,10 @@ void close_device(void* handle) {
 
 #ifdef _WIN32
     if ((HANDLE*) handle) {
-        closeHandle((HANDLE*) *handle);
+        closeHandle((HANDLE*) handle);
 #elif __linux__
     if ((int *) handle) {
-        close((int*) *handle);
+        close((int*) handle);
 #endif
     }
 
