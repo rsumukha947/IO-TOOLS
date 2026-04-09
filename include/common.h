@@ -5,6 +5,10 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#ifdef __cplusplus
+    extern "C" {
+#endif
+
 #define __STDC_WANT_LIB_EXT1__ 1
 
 /* Standard C Library Includes */
@@ -144,11 +148,14 @@
  * ======================================================================== */
 
 typedef enum {
+
     TE_FAIL                             = 0,
     TE_PASS                             = 1
+
 } status_t;
 
 typedef struct {
+
     FILE*   log_file_p;
     FILE*   err_file_p;
     FILE*   dump_file_p;
@@ -158,14 +165,18 @@ typedef struct {
     char    dump_file[MAX_FILE_NAME_LEN];
     uint8_t log_level;
     bool    use_dump;
+
 } log_err_dump_t;
 
 typedef enum {
+
     BACK_SLASH = 0,
     FORWARD_SLASH
+
 } slash_type_t;
 
 typedef struct {
+
     char        devname[MAX_FILE_NAME_LEN];
 #ifdef _WIN32
     HANDLE      fd;
@@ -195,6 +206,15 @@ typedef struct {
 
 #define NO_RETURN                                   \
     __declspec(noreturn)
+
+#define ATTR_INLINE                                 \
+    __forceinline
+
+#define ATTR_DEPRECATED(msg)                        \
+    __declspec(deprecated(msg))
+
+#define LIBC_CALL_CONVENTION                        \
+    __cdecl
 
 #define ATTR_PACKED_STRUCT(struct_name, structure)  \
     {                                               \
@@ -230,6 +250,7 @@ typedef struct {
     strncat_s(dest, destsz, src, count)
 
 typedef struct {
+
     LPCWSTR        devname[MAX_FILE_NAME_LEN];
     DWORD          desired_access_mode;
     DWORD          share_mode;
@@ -237,14 +258,31 @@ typedef struct {
     DWORD          creation_disposition;
     DWORD          flags_and_attributes;
     HANDLE         template_file;
+
 } device_open_t;
 
 #endif /* _WIN32 */
 
 #ifdef __linux__
 
+#define ATTR_EXPORT                                 \
+    __attribute__((visibility("default")))
+
+#define ATTR_IMPORT
+
+#define NO_RETURN                                   \
+    __declspec(noreturn)
+
+#define ATTR_INLINE                                 \
+    __attribute__((always_inline))
+
+#define ATTR_DEPRECATED(msg)                        \
+    __attribute__(deprecated(msg))
+
 #define ATTR_ALIGN(n)                               \
     __attribute__((aligned(n)))
+
+#define LIBC_CALL_CONVENTION
 
 #define ATTR_PACKED_STRUCT(struct_name, structure)  \
     {                                               \
@@ -279,8 +317,10 @@ typedef struct {
 
 
 typedef struct {
+
     char*       devname;
     int         flags;
+
 } device_open_t;
 
 #endif /* __linux__ */
@@ -289,46 +329,51 @@ typedef struct {
  * Function Declarations
  * ======================================================================== */
 
-bool get_local_time(struct tm* local_time,
-                        long long unsigned int* micro_seconds);
+ATTR_EXPORT bool LIBC_CALL_CONVENTION get_local_time(struct tm* local_time,
+                                                     long long unsigned int* micro_seconds);
 
-void log_err_dump_init(log_err_dump_t* log_err_dump,
-                       char* log_file,
-                       char* err_file,
-                       char* dump_file,
-                       char* tool_name);
+ATTR_EXPORT void LIBC_CALL_CONVENTION log_err_dump_init(log_err_dump_t* log_err_dump,
+                                                        char* log_file,
+                                                        char* err_file,
+                                                        char* dump_file,
+                                                        char* tool_name);
 
-void log_info(log_err_dump_t* log,
-              uint8_t log_level,
-              const char* format,
-              ...);
+ATTR_EXPORT void LIBC_CALL_CONVENTION log_info(log_err_dump_t* log,
+                                                uint8_t log_level,
+                                                const char* format,
+                                                ...);
 
-void log_error(log_err_dump_t* err,
-               const char* format,
-               ...);
+ATTR_EXPORT void LIBC_CALL_CONVENTION log_error(log_err_dump_t* err,
+                                                const char* format,
+                                                ...);
 
-void log_err_dump_close(log_err_dump_t* log_err_dump);
+ATTR_EXPORT void LIBC_CALL_CONVENTION log_err_dump_close(log_err_dump_t* log_err_dump);
 
-void dump_buffer(log_err_dump_t* dump,
-                 void* buffer,
-                 size_t size);
+ATTR_EXPORT void LIBC_CALL_CONVENTION dump_buffer(log_err_dump_t* dump,
+                                                  void* buffer,
+                                                  size_t size);
 
-bool aligned_buffer_alloc(size_t size,
-                          size_t alignment,
-                          void* ptr);
+ATTR_EXPORT bool LIBC_CALL_CONVENTION aligned_buffer_alloc(size_t size,
+                                                            size_t alignment,
+                                                            void* ptr);
 
-void aligned_buffer_free(void* ptr);
+ATTR_EXPORT void LIBC_CALL_CONVENTION aligned_buffer_free(void* ptr);
 
-bool get_ascii_devname(log_err_dump_t* log_err_dump,
-                       const char* devname,
-                       size_t size,
-                       char* ascii_devname,
-                       slash_type_t slash_type);
+ATTR_EXPORT bool LIBC_CALL_CONVENTION get_ascii_devname(log_err_dump_t* log_err_dump,
+                                                        const char* devname,
+                                                        size_t size,
+                                                        char* ascii_devname,
+                                                        slash_type_t slash_type);
 
-bool open_device(log_err_dump_t *log_err_dump, 
-                 device_open_t* dev_attr,
-                 void* handle);
+ATTR_EXPORT bool LIBC_CALL_CONVENTION open_device(log_err_dump_t *log_err_dump, 
+                                                  device_open_t* dev_attr,
+                                                  void* handle);
 
-void close_device(void* handle);
+ATTR_EXPORT void LIBC_CALL_CONVENTION close_device(void* handle);
 
 #endif /* COMMON_H */
+
+
+#ifdef __cplusplus
+    }
+#endif

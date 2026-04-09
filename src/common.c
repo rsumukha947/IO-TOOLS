@@ -1,7 +1,6 @@
 /*******************************************************************
 *                Sumukha IO-TOOLs OPEN-SOURCE                      *
 ********************************************************************/
-
 #include "common.h"
 
 /**
@@ -11,7 +10,7 @@
  * @param [in] raw_time 
  * @return status_t
  */
-bool get_local_time(struct tm* local_time, long long unsigned int* micro_seconds) {
+bool LIBC_CALL_CONVENTION get_local_time(struct tm* local_time, long long unsigned int* micro_seconds) {
 
 #ifdef _WIN32
 
@@ -61,7 +60,7 @@ bool get_local_time(struct tm* local_time, long long unsigned int* micro_seconds
     return true;
 }
 
-void log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_file, char *dump_file, char* tool_name) {
+void LIBC_CALL_CONVENTION log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_file, char *dump_file, char* tool_name) {
 
     SAFE_MEMCLEAR(log_err_dump, sizeof(log_err_dump_t));
 
@@ -105,7 +104,7 @@ void log_err_dump_init(log_err_dump_t* log_err_dump, char* log_file, char* err_f
     }
  }
 
-void log_info(log_err_dump_t* log, uint8_t log_level, const char* format, ...) {
+void LIBC_CALL_CONVENTION log_info(log_err_dump_t* log, uint8_t log_level, const char* format, ...) {
 
     va_list         args;
     long long unsigned int  micro_seconds = 0;
@@ -126,7 +125,7 @@ void log_info(log_err_dump_t* log, uint8_t log_level, const char* format, ...) {
 
 }
 
-void log_error(log_err_dump_t* err, const char* format, ...) {
+void LIBC_CALL_CONVENTION log_error(log_err_dump_t* err, const char* format, ...) {
 
     va_list args;
     long long unsigned int  micro_seconds = 0;
@@ -145,7 +144,7 @@ void log_error(log_err_dump_t* err, const char* format, ...) {
 
 }
 
-void dump_buffer(log_err_dump_t* dump, void* buffer, size_t size) {
+void LIBC_CALL_CONVENTION dump_buffer(log_err_dump_t* dump, void* buffer, size_t size) {
 
     uint32_t i = 0; uint8_t j = 0; uint64_t low = 0, high = 0;
     char str[BIT_16 + 1] = {0}; uint8_t* buffer_p = (uint8_t*)buffer;
@@ -195,7 +194,7 @@ void dump_buffer(log_err_dump_t* dump, void* buffer, size_t size) {
     dump->use_dump = false;
 }
 
-void log_err_dump_close(log_err_dump_t* log_err_dump) {
+void LIBC_CALL_CONVENTION log_err_dump_close(log_err_dump_t* log_err_dump) {
 
     if (log_err_dump->log_file_p && log_err_dump->log_file_p != DEFAULT_LOG_FILE) {
         fclose(log_err_dump->log_file_p);
@@ -208,7 +207,7 @@ void log_err_dump_close(log_err_dump_t* log_err_dump) {
     }
 }
 
-bool alligned_buffer_alloc(log_err_dump_t* log_err_dump, size_t size, size_t alignment, void* ptr) {
+bool LIBC_CALL_CONVENTION alligned_buffer_alloc(log_err_dump_t* log_err_dump, size_t size, size_t alignment, void* ptr) {
 
     if ((size == 0 || alignment == 0) && (alignment <= size) && (0 != (size % alignment))) {
         log_error(log_err_dump, "%s: %s Invalid input for size=%zu and alignment=%zu", __func__, ERR, size, alignment);
@@ -222,14 +221,14 @@ bool alligned_buffer_alloc(log_err_dump_t* log_err_dump, size_t size, size_t ali
     return true;
 }
 
-void aligned_buffer_free(void* ptr) {
+void LIBC_CALL_CONVENTION aligned_buffer_free(void* ptr) {
 
     if (ptr) {
         ALIGNED_MEM_FREE(ptr);
     }
 }
 
-bool get_ascii_devname(log_err_dump_t* log_err_dump, const char* devname, size_t size, char* ascii_devname, slash_type_t slash_type) {
+bool LIBC_CALL_CONVENTION get_ascii_devname(log_err_dump_t* log_err_dump, const char* devname, size_t size, char* ascii_devname, slash_type_t slash_type) {
 
     char* context = NULL, *token = NULL;
     char slash = (slash_type == BACK_SLASH) ? '\\' : '/';
@@ -262,7 +261,7 @@ done:
     return true;
 }
 
-bool open_device(log_err_dump_t *log_err_dump, device_open_t* dev_attr, void* handle) {
+bool LIBC_CALL_CONVENTION open_device(log_err_dump_t *log_err_dump, device_open_t* dev_attr, void* handle) {
 
     if (NULL == dev_attr->devname || NULL == dev_attr) {
         log_error(log_err_dump, "%s: %s Invalid input for devname=%s and (addr)dev_attr=%p", __func__, ERR, dev_attr->devname, dev_attr);
@@ -293,7 +292,7 @@ bool open_device(log_err_dump_t *log_err_dump, device_open_t* dev_attr, void* ha
     return true;
 }
 
-void close_device(void* handle) {
+void LIBC_CALL_CONVENTION close_device(void* handle) {
 
 #ifdef _WIN32
     if ((HANDLE*) handle) {
