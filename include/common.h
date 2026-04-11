@@ -26,12 +26,129 @@
 #include <windows.h>
 #elif __linux__
 #define _LARGEFILE64_SOURCE     /* To use lseek64 explicitly */
+#define _FILE_OFFSET_BITS 64
 #include <unistd.h>
 #include <malloc.h>
 #include <fcntl.h>
 #inlcude <sys/stat.h>
 #include <sys/types.h>
 #endif
+
+/* ========================================================================
+ * Platform-Specific Helper Macros
+ * ======================================================================== */
+
+#ifdef _WIN32
+
+#define ATTR_EXPORT                                 \
+    __declspec(dllexport)
+
+#define ATTR_IMPORT                                 \
+    __declspec(dllimport)
+
+#define ATTR_ALIGN(n)                               \
+    __declspec(align(n))
+
+#define NO_RETURN                                   \
+    __declspec(noreturn)
+
+#define ATTR_INLINE                                 \
+    __forceinline
+
+#define ATTR_DEPRECATED(msg)                        \
+    __declspec(deprecated(msg))
+
+#define LIBC_CALL_CONVENTION                        \
+    __cdecl
+
+#define ATTR_PACKED_STRUCT(struct_name, structure)  \
+    {                                               \
+        __pragma(pack(push, 1))                     \
+        typedef struct {                            \
+            structure                               \
+        } struct_name;                              \
+        __pragma(pack(pop))                         \
+    }
+
+#define SAFE_FPRINTF(stream, format, ...)           \
+    fprintf_s(stream, format, ##__VA_ARGS__)
+
+#define SAFE_MEMCPY(dest, destsz, src, count)       \
+    memcpy_s(dest, destsz, src, count)
+
+#define SAFE_MEMCLEAR(dest, count)                  \
+    SecureZeroMemory(dest, count)
+
+#define SAFE_SNPRINTF(dest, destsz, fmt, ...)       \
+    _snprintf_s(dest, destsz, destsz, fmt, ##__VA_ARGS__)
+
+#define ALIGNED_MEM_ALLOC(size, alignment)          \
+    _aligned_malloc(size, alignment)
+
+#define ALIGNED_MEM_FREE(ptr)                       \
+    _aligned_free(ptr)
+
+#define SAFE_STRTOK(str, delim, context)            \
+    strtok_s(str, delim, context)
+
+#define SAFE_STRNCAT(dest, destsz, src, count)      \
+    strncat_s(dest, destsz, src, count)
+
+#endif /* _WIN32 */
+
+#ifdef __linux__
+
+#define ATTR_EXPORT                                 \
+    __attribute__((visibility("default")))
+
+#define ATTR_IMPORT
+
+#define NO_RETURN                                   \
+    __declspec(noreturn)
+
+#define ATTR_INLINE                                 \
+    __attribute__((always_inline))
+
+#define ATTR_DEPRECATED(msg)                        \
+    __attribute__(deprecated(msg))
+
+#define ATTR_ALIGN(n)                               \
+    __attribute__((aligned(n)))
+
+#define LIBC_CALL_CONVENTION
+
+#define ATTR_PACKED_STRUCT(struct_name, structure)  \
+    {                                               \
+        typedef struct {                            \
+            structure                               \
+        } struct_name __attribute__((packed));      \
+    }
+
+#define SAFE_FPRINTF(stream, format, ...)           \
+    fprintf(stream, format, ##__VA_ARGS__)
+
+#define SAFE_MEMCPY(dest, destsz, src, count)       \
+    memcpy(dest, src, count)
+
+#define SAFE_MEMCLEAR(dest, count)                  \
+    explicit_bzero(dest, count)
+
+#define SAFE_SNPRINTF(dest, destsz, fmt, ...)       \
+    snprintf(dest, destsz, fmt, ##__VA_ARGS__)
+
+#define ALIGNED_MEM_ALLOC(size, alignment)          \
+    aligned_alloc(alignment, size)
+
+#define ALIGNED_MEM_FREE(ptr)                       \
+    free(ptr)
+
+#define SAFE_STRTOK(str, delim, context)            \
+    strtok_r(str, delim, &context)
+
+#define SAFE_STRNCAT(dest, destsz, src, count)      \
+    strncat(dest, destsz, src, count)
+
+#endif /* __linux__ */
 
 /* ========================================================================
  * Assertions and Basic Macros
@@ -156,7 +273,16 @@ typedef enum {
 
 } status_t;
 
-typedef struct {
+#ifdef _WIN32
+
+typedef struct _stat64 dev_stat;
+
+#elif defined(__linux__)
+
+typedef struct stat    dev_stat;
+
+#endif
+typedef struct log_err_dump {
 
     FILE*   log_file_p;
     FILE*   err_file_p;
@@ -169,6 +295,8 @@ typedef struct {
     bool    use_dump;
 
 } log_err_dump_t;
+
+ATTR_EXPORT log_err_dump_t g_log_err_dump;
 
 typedef enum {
 
@@ -196,17 +324,28 @@ typedef struct {
 typedef struct {
 
 #ifdef _WIN32
-    HANDLE*         handle;
+    HANDLE*         handle_p;
     LARGE_INTEGER   offset;
     PLARGE_INTEGER  new_fp;
     DWORD           whence;
 #elif __linux__
-    int*            fd;
+    int*            fd_p;
     off4_t          offset;
     int             whence;
 #endif
 
-} file_seek_t;
+} dev_seek_t;
+
+typedef struct {
+
+#ifdef _WIN32
+    HANDLE*         handle_p;
+#elif defined(__linux__)
+    int*            fd_p;
+#endif
+    dev_stat*     dev_statp;
+
+} dev_stat_t;
 
 typedef struct {
 
@@ -218,138 +357,20 @@ typedef struct {
 } device_t;
 
 /* ========================================================================
- * Platform-Specific Helper Macros
- * ======================================================================== */
-
-#ifdef _WIN32
-
-#define ATTR_EXPORT                                 \
-    __declspec(dllexport)
-
-#define ATTR_IMPORT                                 \
-    __declspec(dllimport)
-
-#define ATTR_ALIGN(n)                               \
-    __declspec(align(n))
-
-#define NO_RETURN                                   \
-    __declspec(noreturn)
-
-#define ATTR_INLINE                                 \
-    __forceinline
-
-#define ATTR_DEPRECATED(msg)                        \
-    __declspec(deprecated(msg))
-
-#define LIBC_CALL_CONVENTION                        \
-    __cdecl
-
-#define ATTR_PACKED_STRUCT(struct_name, structure)  \
-    {                                               \
-        __pragma(pack(push, 1))                     \
-        typedef struct {                            \
-            structure                               \
-        } struct_name;                              \
-        __pragma(pack(pop))                         \
-    }
-
-#define SAFE_FPRINTF(stream, format, ...)           \
-    fprintf_s(stream, format, ##__VA_ARGS__)
-
-#define SAFE_MEMCPY(dest, destsz, src, count)       \
-    memcpy_s(dest, destsz, src, count)
-
-#define SAFE_MEMCLEAR(dest, count)                  \
-    SecureZeroMemory(dest, count)
-
-#define SAFE_SNPRINTF(dest, destsz, fmt, ...)       \
-    _snprintf_s(dest, destsz, destsz, fmt, ##__VA_ARGS__)
-
-#define ALIGNED_MEM_ALLOC(size, alignment)          \
-    _aligned_malloc(size, alignment)
-
-#define ALIGNED_MEM_FREE(ptr)                       \
-    _aligned_free(ptr)
-
-#define SAFE_STRTOK(str, delim, context)            \
-    strtok_s(str, delim, context)
-
-#define SAFE_STRNCAT(dest, destsz, src, count)      \
-    strncat_s(dest, destsz, src, count)
-
-#endif /* _WIN32 */
-
-#ifdef __linux__
-
-#define ATTR_EXPORT                                 \
-    __attribute__((visibility("default")))
-
-#define ATTR_IMPORT
-
-#define NO_RETURN                                   \
-    __declspec(noreturn)
-
-#define ATTR_INLINE                                 \
-    __attribute__((always_inline))
-
-#define ATTR_DEPRECATED(msg)                        \
-    __attribute__(deprecated(msg))
-
-#define ATTR_ALIGN(n)                               \
-    __attribute__((aligned(n)))
-
-#define LIBC_CALL_CONVENTION
-
-#define ATTR_PACKED_STRUCT(struct_name, structure)  \
-    {                                               \
-        typedef struct {                            \
-            structure                               \
-        } struct_name __attribute__((packed));      \
-    }
-
-#define SAFE_FPRINTF(stream, format, ...)           \
-    fprintf(stream, format, ##__VA_ARGS__)
-
-#define SAFE_MEMCPY(dest, destsz, src, count)       \
-    memcpy(dest, src, count)
-
-#define SAFE_MEMCLEAR(dest, count)                  \
-    explicit_bzero(dest, count)
-
-#define SAFE_SNPRINTF(dest, destsz, fmt, ...)       \
-    snprintf(dest, destsz, fmt, ##__VA_ARGS__)
-
-#define ALIGNED_MEM_ALLOC(size, alignment)          \
-    aligned_alloc(alignment, size)
-
-#define ALIGNED_MEM_FREE(ptr)                       \
-    free(ptr)
-
-#define SAFE_STRTOK(str, delim, context)            \
-    strtok_r(str, delim, &context)
-
-#define SAFE_STRNCAT(dest, destsz, src, count)      \
-    strncat(dest, destsz, src, count)
-
-#endif /* __linux__ */
-
-/* ========================================================================
  * Function Declarations
  * ======================================================================== */
 
 ATTR_EXPORT bool LIBC_CALL_CONVENTION get_local_time(struct tm* local_time,
                                                      long long unsigned int* micro_seconds);
 
-ATTR_EXPORT void LIBC_CALL_CONVENTION log_err_dump_init(log_err_dump_t* log_err_dump,
-                                                        char* log_file,
+ATTR_EXPORT void LIBC_CALL_CONVENTION log_err_dump_init(char* log_file,
                                                         char* err_file,
                                                         char* dump_file,
                                                         char* tool_name);
 
-ATTR_EXPORT void LIBC_CALL_CONVENTION log_info(log_err_dump_t* log,
-                                                uint8_t log_level,
-                                                const char* format,
-                                                ...);
+ATTR_EXPORT void LIBC_CALL_CONVENTION log_info(uint8_t log_level,
+                                               const char* format,
+                                               ...);
 
 ATTR_EXPORT void LIBC_CALL_CONVENTION log_error(log_err_dump_t* err,
                                                 const char* format,
@@ -362,19 +383,17 @@ ATTR_EXPORT void LIBC_CALL_CONVENTION dump_buffer(log_err_dump_t* dump,
                                                   size_t size);
 
 ATTR_EXPORT bool LIBC_CALL_CONVENTION aligned_buffer_alloc(size_t size,
-                                                            size_t alignment,
-                                                            void* ptr);
+                                                           size_t alignment,
+                                                           void* ptr);
 
 ATTR_EXPORT void LIBC_CALL_CONVENTION aligned_buffer_free(void* ptr);
 
-ATTR_EXPORT bool LIBC_CALL_CONVENTION get_ascii_devname(log_err_dump_t* log_err_dump,
-                                                        const char* devname,
+ATTR_EXPORT bool LIBC_CALL_CONVENTION get_ascii_devname(const char* devname,
                                                         size_t size,
                                                         char* ascii_devname,
                                                         slash_type_t slash_type);
 
-ATTR_EXPORT bool LIBC_CALL_CONVENTION open_device(log_err_dump_t *log_err_dump,
-                                                  char* devname, 
+ATTR_EXPORT bool LIBC_CALL_CONVENTION open_device(char* devname, 
                                                   device_open_attr_t* dev_attr,
                                                   void* handle);
 
