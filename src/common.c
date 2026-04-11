@@ -261,16 +261,16 @@ done:
     return true;
 }
 
-bool LIBC_CALL_CONVENTION open_device(log_err_dump_t *log_err_dump, device_open_t* dev_attr, void* handle) {
+bool LIBC_CALL_CONVENTION open_device(log_err_dump_t *log_err_dump, device_open_attr_t* dev_attr, char* devname, void* handle) {
 
-    if (NULL == dev_attr->devname || NULL == dev_attr) {
-        log_error(log_err_dump, "%s: %s Invalid input for devname=%s and (addr)dev_attr=%p", __func__, ERR, dev_attr->devname, dev_attr);
+    if (NULL == devname || NULL == dev_attr) {
+        log_error(log_err_dump, "%s: %s Invalid input for devname=%s and (addr)dev_attr=%p", __func__, ERR, devname, dev_attr);
         return false;
     }
 
 #ifdef _WIN32
     HANDLE* handle_p = (HANDLE*)handle;
-    if (INVALID_HANDLE_VALUE == (*handle_p = CreateFileW(dev_attr->devname,
+    if (INVALID_HANDLE_VALUE == (*handle_p = CreateFileW((LPCWSTR)devname,
                                                          dev_attr->desired_access_mode,
                                                          dev_attr->share_mode,
                                                          dev_attr->security_attributes,
@@ -278,17 +278,17 @@ bool LIBC_CALL_CONVENTION open_device(log_err_dump_t *log_err_dump, device_open_
                                                          dev_attr->flags_and_attributes,
                                                          dev_attr->template_file))) {
 
-        log_error(log_err_dump, "%s: %s Failed to open device %s with errno=%lu", __func__, ERR, dev_attr->devname, GetLastError());
+        log_error(log_err_dump, "%s: %s Failed to open device %s with errno=%lu", __func__, ERR, devname, GetLastError());
         return false;
     }
 #elif __linux__
     int* fd_p = (int*) handle;
-    if (-1 == (*fd_p = open(dev_attr->devname, dev_attr->flags))) {
-        log_error(log_err_dump, "%s: %s Failed to open device %s with errno=%d", __func__, ERR, dev_attr->devname, errno);
+    if (-1 == (*fd_p = open(devname, dev_attr->flags))) {
+        log_error(log_err_dump, "%s: %s Failed to open device %s with errno=%d", __func__, ERR, devname, errno);
     }
 #endif
 
-    log_info(log_err_dump, 4, "%s: %s Device %s opened successfully handle=%p", __func__, INFO, dev_attr->devname, *handle_p);
+    log_info(log_err_dump, 4, "%s: %s Device %s opened successfully handle=%p", __func__, INFO, devname, *handle_p);
     return true;
 }
 

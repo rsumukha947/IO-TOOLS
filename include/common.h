@@ -21,14 +21,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
 /* Platform-Specific Includes */
 #ifdef _WIN32
 #include <windows.h>
 #elif __linux__
+#define _LARGEFILE64_SOURCE     /* To use lseek64 explicitly */
 #include <unistd.h>
 #include <malloc.h>
 #include <fcntl.h>
+#inlcude <sys/stat.h>
+#include <sys/types.h>
 #endif
 
 /* ========================================================================
@@ -177,12 +179,38 @@ typedef enum {
 
 typedef struct {
 
-    char        devname[MAX_FILE_NAME_LEN];
 #ifdef _WIN32
-    HANDLE      fd;
+    HANDLE*                 handle;
+    DWORD                   desired_access_mode;
+    DWORD                   share_mode;
+    LPSECURITY_ATTRIBUTES   security_attributes;
+    DWORD                   creation_disposition;
+    DWORD                   flags_and_attributes;
+    HANDLE                  template_file;
 #elif __linux__
-    int         fd;
+    int                     flags;
 #endif
+
+} device_open_attr_t;
+
+typedef struct {
+
+#ifdef _WIN32
+    HANDLE*         handle;
+    LARGE_INTEGER   offset;
+    PLARGE_INTEGER  new_fp;
+    DWORD           whence;
+#elif __linux__
+    int*            fd;
+    off4_t          offset;
+    int             whence;
+#endif
+
+} file_seek_t;
+
+typedef struct {
+
+    char        devname[MAX_FILE_NAME_LEN];
     uint64_t    device_bytes_size;
     uint32_t    physical_sector_size;
     uint32_t    device_sector_size;
@@ -249,18 +277,6 @@ typedef struct {
 #define SAFE_STRNCAT(dest, destsz, src, count)      \
     strncat_s(dest, destsz, src, count)
 
-typedef struct {
-
-    LPCWSTR        devname[MAX_FILE_NAME_LEN];
-    DWORD          desired_access_mode;
-    DWORD          share_mode;
-    LPSECURITY_ATTRIBUTES security_attributes;
-    DWORD          creation_disposition;
-    DWORD          flags_and_attributes;
-    HANDLE         template_file;
-
-} device_open_t;
-
 #endif /* _WIN32 */
 
 #ifdef __linux__
@@ -315,14 +331,6 @@ typedef struct {
 #define SAFE_STRNCAT(dest, destsz, src, count)      \
     strncat(dest, destsz, src, count)
 
-
-typedef struct {
-
-    char*       devname;
-    int         flags;
-
-} device_open_t;
-
 #endif /* __linux__ */
 
 /* ========================================================================
@@ -365,8 +373,9 @@ ATTR_EXPORT bool LIBC_CALL_CONVENTION get_ascii_devname(log_err_dump_t* log_err_
                                                         char* ascii_devname,
                                                         slash_type_t slash_type);
 
-ATTR_EXPORT bool LIBC_CALL_CONVENTION open_device(log_err_dump_t *log_err_dump, 
-                                                  device_open_t* dev_attr,
+ATTR_EXPORT bool LIBC_CALL_CONVENTION open_device(log_err_dump_t *log_err_dump,
+                                                  char* devname, 
+                                                  device_open_attr_t* dev_attr,
                                                   void* handle);
 
 ATTR_EXPORT void LIBC_CALL_CONVENTION close_device(void* handle);
