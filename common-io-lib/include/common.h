@@ -104,7 +104,7 @@
 #define ATTR_IMPORT
 
 #define NO_RETURN                                   \
-    __declspec(noreturn)
+    __attribute__((noreturn))
 
 #define ATTR_INLINE                                 \
     __attribute__((always_inline))
