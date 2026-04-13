@@ -1,6 +1,6 @@
 {
     "env" : {
-            "includepath" : [ "${workspaceFolder/include}",
+            "includepath" : [ "${workspaceFolder}\\common-io-lib\\include",
                               "C:\\Program Files (x86)\\Windows Kits\\10\\Include"
                             ]
     },
@@ -8,7 +8,7 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**",
+                "${workspaceFolder}\\common-io-lib\\include",
                 "C:\\Program Files (x86)\\Windows Kits\\10\\Include"
             ],
             "defines": [

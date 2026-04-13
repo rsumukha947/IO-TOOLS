@@ -2,7 +2,7 @@
 *                Sumukha IO-TOOLs OPEN-SOURCE                      *
 ********************************************************************/
 #include "common.h"
-
+#include <windows.h>
 /**
  * @brief Get the local time object
  * 
@@ -62,44 +62,34 @@ bool LIBC_CALL_CONVENTION get_local_time(struct tm* local_time, long long unsign
 
 void LIBC_CALL_CONVENTION log_err_dump_init(char* log_file, char* err_file, char *dump_file, char* tool_name) {
 
+    char* log_err_dump_file[] = {log_file, err_file, dump_file};
+    char* log_err_dump_str[] = {"log_file", "error_file", "dump_file"};
+    char* std_files[] = {"stdout", "stderr", "stdout"};
     SAFE_MEMCLEAR(&g_log_err_dump, sizeof(log_err_dump_t));
-
+    
     if (NULL != tool_name) {
         SAFE_SNPRINTF(g_log_err_dump.tool_name, MAX_FILE_NAME_LEN, tool_name);
     } else {
         SAFE_SNPRINTF(g_log_err_dump.tool_name, MAX_FILE_NAME_LEN, "Unknown Tool");
     }
-    if (NULL == log_file) {
-        printf("[Timer not started yet]: %s: %s Log file is NULL, defaulting to stdout.\n", __func__, WARN);
-        g_log_err_dump.log_file_p = DEFAULT_LOG_FILE;
-    } else {
-        if (NULL == (g_log_err_dump.log_file_p = fopen(log_file, "a"))) {
-            printf("[Timer not started yet]: %s: %s Unable to open log file errno=%d, defaulting to stdout.\n", __func__, WARN, errno);
-            g_log_err_dump.log_file_p = DEFAULT_LOG_FILE;
+
+    for (int i = 0; i < 3; i++) {
+
+        char* file = NULL, default_file = NULL, fp = NULL;
+        if (0 == i) { file = g_log_err_dump.log_file; fp = g_log_err_dump.log_file_p; default_file = DEFAULT_LOG_FILE; }
+        else if(1 == i) { file = g_log_err_dump.err_file; fp = g_log_err_dump.err_file_p; default_file = DEFAULT_ERROR_LOG_FILE; }
+        else  { file = g_log_err_dump.dump_file; fp = g_log_err_dump.dump_file_p; default_file = DEFAULT_DUMP_FILE; }
+        
+        if (NULL == fp) {
+            printf("[Timer not started yet]: %s: %s %s is NULL, defaulting to %s.\n", __func__, WARN, log_err_dump_str[i], std_files[i]);
+            fp = default_file;
         } else {
-            SAFE_SNPRINTF(g_log_err_dump.log_file, MAX_FILE_NAME_LEN, log_file);
-        }
-    }
-    if (NULL == err_file) {
-        printf("[Timer not started yet]: %s: %s Error file is NULL, defaulting to stderr.\n", __func__, WARN);
-        g_log_err_dump.err_file_p = DEFAULT_ERROR_LOG_FILE;
-    } else {
-        if (NULL == (g_log_err_dump.err_file_p = fopen(err_file, "a"))) {
-            printf("[Timer not started yet]: %s: %s Unable to open error file errno=%d, defaulting to stderr.\n", __func__, WARN, errno);
-            g_log_err_dump.err_file_p = DEFAULT_ERROR_LOG_FILE;
-        } else {
-            SAFE_SNPRINTF(g_log_err_dump.err_file, MAX_FILE_NAME_LEN, err_file);
-        }
-    }
-    if (NULL == dump_file) {
-        printf("[Timer not started yet]: %s: %s Dump file is NULL, defaulting to stdout.\n", __func__, WARN);
-        g_log_err_dump.dump_file_p = DEFAULT_DUMP_FILE;
-    } else {
-        if(NULL == (g_log_err_dump.dump_file_p = fopen(dump_file, "a"))) {
-            printf("[Timer not started yet]: %s: %s Unable to open dump file errno=%d, defaulting to stdout.\n", __func__, ERR, errno);
-            g_log_err_dump.dump_file_p = DEFAULT_DUMP_FILE;
-        } else {
-            SAFE_SNPRINTF(g_log_err_dump.dump_file, MAX_FILE_NAME_LEN, dump_file);
+            if (NULL == (fp = fopen(log_err_dump_file[i], "a"))) {
+                printf("[Timer not started yet]: %s: %s Unable to open %s errno=%d, defaulting to %s.\n", __func__, WARN, log_err_dump_str[i], errno, std_files[i]);
+                fp = default_file;
+            } else {
+                SAFE_SNPRINTF(file, MAX_FILE_NAME_LEN, log_err_dump_str[i]);
+            }
         }
     }
  }
@@ -110,6 +100,8 @@ void LIBC_CALL_CONVENTION log_info(uint8_t log_level, const char* format, ...) {
     long long unsigned int  micro_seconds = 0;
     struct tm               local_time = {0};
     FILE* file_p = (g_log_err_dump.use_dump ? g_log_err_dump.dump_file_p : g_log_err_dump.log_file_p);
+
+    if ( (FALSE == g_log_err_dump.use_dump) && (g_log_verbosity < log_level) ) return;
 
     if (get_local_time((struct tm*)&local_time, &micro_seconds)) {
         SAFE_FPRINTF(file_p, "{%s}[%02d-%02d-%04d %02d:%02d:%02d.%06llu]: ", g_log_err_dump.tool_name, local_time.tm_mday, local_time.tm_mon, local_time.tm_year, local_time.tm_hour, local_time.tm_min, local_time.tm_sec, micro_seconds);
@@ -295,12 +287,52 @@ bool LIBC_CALL_CONVENTION open_device(device_open_attr_t* dev_attr, char* devnam
 void LIBC_CALL_CONVENTION close_device(void* handle) {
 
 #ifdef _WIN32
+
     if ((HANDLE*) handle) {
         closeHandle((HANDLE*) handle);
 #elif __linux__
-    if ((int *) handle) {
+
+    if ((int*) handle) {
         close((int*) handle);
+
 #endif
     }
 
 }
+
+bool LIBC_CALL_CONVENTION device_stat(dev_stat_t* dev_stat) {
+
+#ifdef _WIN32
+
+    if (INVALID_HANDLE_VALUE == dev_stat->handle_p) {
+        log_error("%s: %s Invalid Handle value", __func__, ERR);
+        return false;
+    }
+    if (!(GetFileInformationByHandle(dev_stat->handle_p,
+                                    (LPBY_HANDLE_FILE_INFORMATION)dev_stat->dev_stat_p))) {
+        log_error("%s: %s Failed to get current file status for device handle/fd=%p errno=%d", __func__, ERR, dev_stat->handle_p, GetLastError());
+        return false;
+    }
+
+#elif defined(__linux__)
+
+    if (0 > dev_stat->handle_p) {
+        log_error("%s: %s Invalid Handle value", __func__, ERR);
+        return false;
+    }
+    if (0 > fstat((int)(*dev_stat->fd_p),
+                  (struct stat*)dev_stat->dev_stat_p)) {
+        log_error("%s: %s Failed to get current file status for device handle/fd=%p errno=%d", __func__, ERR, dev_stat->handle_p, errno);
+        return false;
+    }
+
+#endif
+
+    log_info(4, "%s: %s file status updated device handle/fd: %p", __func__, ERR, dev_stat->handle_p);
+    return true;
+}
+
+bool LIBC_CALL_CONVENTION seek_file(dev_seek_t* dev_seek) {
+
+}
+

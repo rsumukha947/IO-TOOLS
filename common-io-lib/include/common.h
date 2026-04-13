@@ -251,7 +251,6 @@
 #define DEFAULT_OUTPUT_FILE             stdout
 #define DEFAULT_DUMP_FILE               DEFAULT_LOG_FILE
 #define DEFAULT_LOG_LEVEL               4
-
 /* ========================================================================
  * Log message type Definitions
  * ======================================================================== */
@@ -263,7 +262,7 @@
 #define DEBUG                           "DEBUG:"
 
 /* ========================================================================
- * Type Definitions
+ * Type Definitions & Global variables
  * ======================================================================== */
 
 typedef enum {
@@ -275,13 +274,15 @@ typedef enum {
 
 #ifdef _WIN32
 
-typedef struct _stat64 dev_stat;
+ATTR_IMPORT extern uint8_t          g_log_verbosity;
+typedef BY_HANDLE_FILE_INFORMATION  dev_stat;
 
 #elif defined(__linux__)
 
-typedef struct stat    dev_stat;
+typedef struct stat                 dev_stat;
 
 #endif
+
 typedef struct log_err_dump {
 
     FILE*   log_file_p;
@@ -343,7 +344,7 @@ typedef struct {
 #elif defined(__linux__)
     int*            fd_p;
 #endif
-    dev_stat*     dev_statp;
+    dev_stat*     dev_stat_p;
 
 } dev_stat_t;
 
@@ -398,6 +399,10 @@ ATTR_EXPORT bool LIBC_CALL_CONVENTION open_device(char* devname,
                                                   void* handle);
 
 ATTR_EXPORT void LIBC_CALL_CONVENTION close_device(void* handle);
+
+ATTR_EXPORT bool LIBC_CALL_CONVENTION device_seek(dev_stat_t* dev_stat);
+
+ATTR_EXPORT bool LIBC_CALL_CONVENTION device_stat(dev_stat_t* dev_stat_t);
 
 #endif /* COMMON_H */
 
