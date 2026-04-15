@@ -304,7 +304,7 @@ ATTR_EXPORT log_err_dump_t g_log_err_dump;
 
 typedef struct {
     uint32_t error_num;
-    uint32_t print_buffer_size;
+    char error_buffer[MAX_ERROR_LEN];
 } error_t;
 typedef enum {
 
