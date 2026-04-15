@@ -3,6 +3,37 @@
 ********************************************************************/
 #include "common.h"
 #include <windows.h>
+
+ATTR_EXPORT char* LIBC_CALL_CONVENTION print_error() {
+#ifdef _WIN32
+
+    DWORD err = GetLastError();
+    DWORD size = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                                NULL, 
+                                err, 
+                                0, 
+                                error_buffer, 
+                                MAX_ERROR_LEN, 
+                                NULL);
+    if(size > 0) {
+        SAFE_SNPRINTF(error_buffer, MAX_ERROR_LEN, "(%d)%s", err, error_buffer);
+    } else {
+        SAFE_SNPRINTF(error_buffer, MAX_ERROR_LEN, "(%d)", err);
+    }
+    
+#elif defined(__linux__)
+
+    int err = errno;
+    if(0 > strerror_r(err, error_buffer, MAX_ERROR_LEN)) {
+        SAFE_SNPRINTF(error_buffer, MAX_ERROR_LEN, "(%d)", err);
+    } else {
+        SAFE_SNPRINTF(error_buffer, MAX_ERROR_LEN, "(%d)%s", err, error_buffer);
+    }
+#endif
+
+    return error_buffer;
+}
+
 /**
  * @brief Get the local time object
  * 
@@ -19,7 +50,7 @@ bool LIBC_CALL_CONVENTION get_local_time(struct tm* local_time, long long unsign
 
     GetSystemTimePreciseAsFileTime(&ft);
     if (!FileTimeToSystemTime(&ft, &st)) {
-        printf("%s, Failed to convert FilTime to SystemTime: error=%lu\n", __func__,  GetLastError());
+        printf("%s, Failed to convert FilTime to SystemTime: error=%s\n", __func__,  print_error());
         return false;
     }
 
@@ -44,11 +75,11 @@ bool LIBC_CALL_CONVENTION get_local_time(struct tm* local_time, long long unsign
 
     struct timespec ts;
     if (-1 == clock_gettime(CLOCK_REALTIME, &ts)) {
-        printf("%s: %s Failed to get time using clock_gettime: errno=%d\n", __func__, ERR, errno);
+        printf("%s: %s Failed to get time using clock_gettime: errno=%s\n", __func__, ERR, print_error());
         return false;
     }
     if (NULL == localtime_r(&ts.tv_sec, local_time)) {
-        printf("%s: %s Failed to convert time using localtime_r: errno=%d\n", __func__, ERR, errno);
+        printf("%s: %s Failed to convert time using localtime_r: errno=%s\n", __func__, ERR, print_error());
         return false;
     }
     *micro_seconds = (ts.tv_nsec / 1000); // Convert nanoseconds to microseconds
@@ -85,7 +116,7 @@ void LIBC_CALL_CONVENTION log_err_dump_init(char* log_file, char* err_file, char
             fp = default_file;
         } else {
             if (NULL == (fp = fopen(log_err_dump_file[i], "a"))) {
-                printf("[Timer not started yet]: %s: %s Unable to open %s errno=%d, defaulting to %s.\n", __func__, WARN, log_err_dump_str[i], errno, std_files[i]);
+                printf("[Timer not started yet]: %s: %s Unable to open %s errno=%s, defaulting to %s.\n", __func__, WARN, log_err_dump_str[i], print_error(), std_files[i]);
                 fp = default_file;
             } else {
                 SAFE_SNPRINTF(file, MAX_FILE_NAME_LEN, log_err_dump_str[i]);
@@ -206,7 +237,7 @@ bool LIBC_CALL_CONVENTION alligned_buffer_alloc(size_t size, size_t alignment, v
         return false;
     }
     if (NULL == (ptr = ALIGNED_MEM_ALLOC(size, alignment))) {
-        log_error("%s: %s Memory allocation failed for errno=%d, size=%zu and alignment=%zu", __func__, ERR, errno, size, alignment);
+        log_error("%s: %s Memory allocation failed for errno=%s, size=%zu and alignment=%zu", __func__, ERR, print_error(), size, alignment);
         return false;
     }
 
@@ -240,7 +271,7 @@ bool LIBC_CALL_CONVENTION get_ascii_devname(const char* devname, size_t size, ch
     }
     token = SAFE_STRTOK((char*)devname, &slash, &context);
     if (NULL == token) {
-        log_error("%s: %s Failed to tokenize devname=%p for delimiter=%c", __func__, ERR, devname, slash);
+        log_error("%s: %s Failed to tokenize devname=%p for delimiter=%c, errno=%s", __func__, ERR, devname, slash, print_error());
         return false;
     }
     while (token) {
@@ -270,13 +301,14 @@ bool LIBC_CALL_CONVENTION open_device(device_open_attr_t* dev_attr, char* devnam
                                                          dev_attr->flags_and_attributes,
                                                          dev_attr->template_file))) {
 
-        log_error("%s: %s Failed to open device %s with errno=%lu", __func__, ERR, devname, GetLastError());
+        log_error("%s: %s Failed to open device %s with errno=%s", __func__, ERR, devname, print_error());
         return false;
     }
 #elif __linux__
     int* fd_p = (int*) handle;
     if (-1 == (*fd_p = open(devname, dev_attr->flags))) {
-        log_error("%s: %s Failed to open device %s with errno=%d", __func__, ERR, devname, errno);
+        log_error("%s: %s Failed to open device %s with errno=%s", __func__, ERR, devname, print_error());
+        return false;
     }
 #endif
 
@@ -310,7 +342,7 @@ bool LIBC_CALL_CONVENTION device_stat(dev_stat_t* dev_stat) {
     }
     if (!(GetFileInformationByHandle(dev_stat->handle_p,
                                     (LPBY_HANDLE_FILE_INFORMATION)dev_stat->dev_stat_p))) {
-        log_error("%s: %s Failed to get current file status for device handle/fd=%p errno=%d", __func__, ERR, dev_stat->handle_p, GetLastError());
+        log_error("%s: %s Failed to get current file status for device handle/fd=%p errno=%s", __func__, ERR, dev_stat->handle_p, print_error());
         return false;
     }
 
@@ -322,17 +354,47 @@ bool LIBC_CALL_CONVENTION device_stat(dev_stat_t* dev_stat) {
     }
     if (0 > fstat((int)(*dev_stat->fd_p),
                   (struct stat*)dev_stat->dev_stat_p)) {
-        log_error("%s: %s Failed to get current file status for device handle/fd=%p errno=%d", __func__, ERR, dev_stat->handle_p, errno);
+        log_error("%s: %s Failed to get current file status for device handle/fd=%p errno=%s", __func__, ERR, dev_stat->handle_p, print_error());
         return false;
     }
 
 #endif
 
-    log_info(4, "%s: %s file status updated device handle/fd: %p", __func__, ERR, dev_stat->handle_p);
+    log_info(4, "%s: %s file status updated for device handle/fd: %p", __func__, INFO, dev_stat->handle_p);
     return true;
 }
 
 bool LIBC_CALL_CONVENTION seek_file(dev_seek_t* dev_seek) {
 
+#ifdef _WIN32
+
+    if (INVALID_HANDLE_VALUE == *dev_seek->handle_p) {
+        log_error("%s: %s Invalid Handle value", __func__, ERR);
+        return false;
+    }
+    if (!SetFilePointerEx((HANDLE)*dev_seek->handle_p,
+                          dev_seek->offset,
+                          (PLARGE_INTEGER)dev_seek->new_fp,
+                          (DWORD)dev_seek->whence)) {
+        log_error("%s: %s Failed to perform file seek for offset=0x%llx, whence=%d for device handle/fd=%p errno=%s", __func__, ERR, dev_seek->offset.QuadPart, dev_seek->whence, dev_seek->handle_p, print_error());
+        return false;
+    }
+
+#elif defined(__linux__)
+
+    if (0 > dev_seek->handle_p) {
+        log_error("%s: %s Invalid Handle value", __func__, ERR);
+        return false;
+    }
+    if (0 > lseek((int)(*dev_seek->fdp),
+                  (off_t)dev_seek->offset,
+                  (int)dev_seek->whence)) {
+        log_error("%s: %s Failed to perform file seek for offset=0x%llx, whence=%d for device handle/fd=%p errno=%s", __func__, ERR, dev_seek->offset.QuadPart, dev_seek->whence, dev_seek->handle_p, print_error());
+        return false;
+    }
+#endif
+
+    log_info(4, "%s: %s file seek succeeded for device handle/fd: %p", __func__, INFO, dev_seek->handle_p);
+    return true;
 }
 

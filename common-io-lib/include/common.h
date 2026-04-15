@@ -29,8 +29,9 @@
 #define _FILE_OFFSET_BITS 64
 #include <unistd.h>
 #include <malloc.h>
+#include <errno.h>
 #include <fcntl.h>
-#inlcude <sys/stat.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #endif
 
@@ -169,8 +170,8 @@
 #define BYTES_8K                        8192
 #define BYTES_16K                       16384
 
-#define MAX_FILE_NAME_LEN               128
-
+#define MAX_FILE_NAME_LEN               BYTES_128
+#define MAX_ERROR_LEN                   BYTES_256
 /* ========================================================================
  * Bit Size Constants
  * ======================================================================== */
@@ -272,6 +273,8 @@ typedef enum {
 
 } status_t;
 
+char error_buffer[MAX_ERROR_LEN];
+
 #ifdef _WIN32
 
 ATTR_IMPORT extern uint8_t          g_log_verbosity;
@@ -283,7 +286,7 @@ typedef struct stat                 dev_stat;
 
 #endif
 
-typedef struct log_err_dump {
+typedef struct {
 
     FILE*   log_file_p;
     FILE*   err_file_p;
@@ -299,6 +302,10 @@ typedef struct log_err_dump {
 
 ATTR_EXPORT log_err_dump_t g_log_err_dump;
 
+typedef struct {
+    uint32_t error_num;
+    uint32_t print_buffer_size;
+} error_t;
 typedef enum {
 
     BACK_SLASH = 0,
@@ -331,7 +338,7 @@ typedef struct {
     DWORD           whence;
 #elif __linux__
     int*            fd_p;
-    off4_t          offset;
+    off_t           offset;
     int             whence;
 #endif
 
@@ -360,6 +367,8 @@ typedef struct {
 /* ========================================================================
  * Function Declarations
  * ======================================================================== */
+
+ATTR_EXPORT char* LIBC_CALL_CONVENTION print_error();
 
 ATTR_EXPORT bool LIBC_CALL_CONVENTION get_local_time(struct tm* local_time,
                                                      long long unsigned int* micro_seconds);
