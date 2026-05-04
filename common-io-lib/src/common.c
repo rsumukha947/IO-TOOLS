@@ -386,12 +386,13 @@ bool LIBC_CALL_CONVENTION seek_file(dev_seek_t* dev_seek) {
         log_error("%s: %s Invalid Handle value", __func__, ERR);
         return false;
     }
-    if (0 > lseek((int)(*dev_seek->fdp),
+    if (0 > lseek((int)(*dev_seek->fd_p),
                   (off_t)dev_seek->offset,
                   (int)dev_seek->whence)) {
         log_error("%s: %s Failed to perform file seek for offset=0x%llx, whence=%d for device handle/fd=%p errno=%s", __func__, ERR, dev_seek->offset.QuadPart, dev_seek->whence, dev_seek->handle_p, print_error());
         return false;
     }
+
 #endif
 
     log_info(4, "%s: %s file seek succeeded for device handle/fd: %p", __func__, INFO, dev_seek->handle_p);
