@@ -12,6 +12,32 @@
 #include "platform.h"
 
 /* ========================================================================
+ * Size Constants (Bytes)
+ * ======================================================================== */
+
+#define BYTES_128                       128
+#define BYTES_256                       256
+#define BYTES_512                       512
+#define BYTES_1K                        1024
+#define BYTES_2K                        2048
+#define BYTES_4K                        4096
+#define BYTES_8K                        8192
+#define BYTES_16K                       16384
+
+#define MAX_FILE_NAME_LEN               BYTES_128
+#define MAX_ERROR_LEN                   BYTES_256
+
+/* ========================================================================
+ * Bit Size Constants
+ * ======================================================================== */
+
+#define BIT_1                           1
+#define BIT_8                           8
+#define BIT_16                          16
+#define BIT_32                          32
+#define BIT_64                          64
+
+/* ========================================================================
  * Bit Shift Macros - Right Shift
  * ======================================================================== */
 
