@@ -30,6 +30,7 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <semaphore.h>
 #endif
 
 /* ========================================================================
@@ -84,23 +85,42 @@
 #define ALIGNED_MEM_FREE(ptr)                       \
     _aligned_free(ptr)
 
-#define SAFE_STRTOK(str, delim, context)            \
-    strtok_s(str, delim, context)
+#define SAFE_STRTOK(str, delim, context_p)          \
+    strtok_s(str, delim, context_p)
 
 #define SAFE_STRNCAT(dest, destsz, src, count)      \
     strncat_s(dest, destsz, src, count)
 
+#define MUTEX_T                                     \
+    HANDLE
+
 #define MUTEX_CREATE(security_attr, initial_owner, name) \
     CreateMutexA(security_attr, initial_owner, name)
 
-#define MUTEX_LOCK(mutex)                          \
+#define MUTEX_LOCK(mutex)                           \
     WaitForSingleObject(mutex, INFINITE)
 
-#define MUTEX_UNLOCK(mutex)                        \
+#define MUTEX_UNLOCK(mutex)                         \
     ReleaseMutex(mutex)
 
-#define MUTEX_DESTROY(mutex)                       \
+#define MUTEX_DESTROY(mutex)                        \
     CloseHandle(mutex)
+
+#define SEMAPHORE_T                                 \
+    HANDLE
+
+#define SEMAPHORE_CREATE(security_attr, init_count, max_count, name) \
+    CreateSemaphoreA(security_attr, init_count, max_count, name)
+
+#define SEMAPHORE_WAIT(semaphore)                   \
+    WaitForSingleObject(semaphore, INFINITE)
+
+#define SEMAPHORE_RELEASE(semaphore, release_count, prev_count) \
+    ReleaseSemaphore(semaphore, release_count, prev_count)
+
+#define SEMAPHORE_DESTROY(semaphore)                \
+    CloseHandle(semaphore)
+
 #endif /* _WIN32 */
 
 #ifdef __linux__
@@ -147,13 +167,40 @@
 #define ALIGNED_MEM_FREE(ptr)                       \
     free(ptr)
 
-#define SAFE_STRTOK(str, delim, context)            \
-    strtok_r(str, delim, &context)
+#define SAFE_STRTOK(str, delim, context_p)          \
+    strtok_r(str, delim, context_p)
 
 #define SAFE_STRNCAT(dest, destsz, src, count)      \
     strncat(dest, destsz, src, count)
 
-#define 
+#define MUTEX_T                                     \
+    pthread_mutex_t
+
+#define MUTEX_CREATE(mutex_addr, attr)              \
+        pthread_mutex_init(mutex_addr, attr)
+
+#define MUTEX_LOCK(mutex_addr)                      \
+        pthread_mutex_lock(mutex_addr)
+
+#define MUTEX_UNLOCK(mutex_addr)                    \
+        pthread_mutex_unlock(mutex_addr)
+
+#define MUTEX_DESTROY(mutex_addr)                   \
+        pthread_mutex_destroy(mutex_addr)
+#define SEMAPHORE_T                                 \
+    sem_t
+
+#define SEMAPHORE_CREATE(sem_addr, init_count, max_count) \
+    sem_init(sem_addr, 0, init_count)
+
+#define SEMAPHORE_WAIT(semaphore)                   \
+    sem_wait(semaphore)
+
+#define SEMAPHORE_RELEASE(semaphore, release_count, prev_count) \
+    sem_post(semaphore)
+
+#define SEMAPHORE_DESTROY(semaphore)                \
+    sem_destroy(semaphore)
 #endif /* __linux__ */
 
 /* ========================================================================
@@ -162,30 +209,6 @@
 
 #define ASSERT(expr)                    assert(expr)
 
-/* ========================================================================
- * Size Constants (Bytes)
- * ======================================================================== */
-
-#define BYTES_128                       128
-#define BYTES_256                       256
-#define BYTES_512                       512
-#define BYTES_1K                        1024
-#define BYTES_2K                        2048
-#define BYTES_4K                        4096
-#define BYTES_8K                        8192
-#define BYTES_16K                       16384
-
-#define MAX_FILE_NAME_LEN               BYTES_128
-#define MAX_ERROR_LEN                   BYTES_256
-/* ========================================================================
- * Bit Size Constants
- * ======================================================================== */
-
-#define BIT_1                           1
-#define BIT_8                           8
-#define BIT_16                          16
-#define BIT_32                          32
-#define BIT_64                          64
 
 #ifdef __cplusplus
     }

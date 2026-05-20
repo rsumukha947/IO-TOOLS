@@ -1,6 +1,6 @@
-/*******************************************************************
-*                Sumukha IO-TOOLs OPEN-SOURCE                      *
-********************************************************************/
+/* ================================================================== *
+*                Sumukha IO-TOOLs OPEN-SOURCE                         *
+*  ================================================================== */
 #include "common.h"
 #include <windows.h>
 
@@ -15,7 +15,7 @@ ATTR_EXPORT char* LIBC_CALL_CONVENTION print_error() {
                                 error_buffer, 
                                 MAX_ERROR_LEN, 
                                 NULL);
-    if(size > 0) {
+    if (0 < size) {
         SAFE_SNPRINTF(error_buffer, MAX_ERROR_LEN, "(%d)%s", err, error_buffer);
     } else {
         SAFE_SNPRINTF(error_buffer, MAX_ERROR_LEN, "(%d)", err);
@@ -24,7 +24,7 @@ ATTR_EXPORT char* LIBC_CALL_CONVENTION print_error() {
 #elif defined(__linux__)
 
     int err = errno;
-    if(0 > strerror_r(err, error_buffer, MAX_ERROR_LEN)) {
+    if (0 > strerror_r(err, error_buffer, MAX_ERROR_LEN)) {
         SAFE_SNPRINTF(error_buffer, MAX_ERROR_LEN, "(%d)", err);
     } else {
         SAFE_SNPRINTF(error_buffer, MAX_ERROR_LEN, "(%d)%s", err, error_buffer);
@@ -106,9 +106,10 @@ void LIBC_CALL_CONVENTION log_err_dump_init(char* log_file, char* err_file, char
 
     for (int i = 0; i < 3; i++) {
 
-        char* file = NULL, default_file = NULL, fp = NULL;
+        char* file = NULL;
+        FILE* fp = NULL, *default_file = NULL;
         if (0 == i) { file = g_log_err_dump.log_file; fp = g_log_err_dump.log_file_p; default_file = DEFAULT_LOG_FILE; }
-        else if(1 == i) { file = g_log_err_dump.err_file; fp = g_log_err_dump.err_file_p; default_file = DEFAULT_ERROR_LOG_FILE; }
+        else if (1 == i) { file = g_log_err_dump.err_file; fp = g_log_err_dump.err_file_p; default_file = DEFAULT_ERROR_LOG_FILE; }
         else  { file = g_log_err_dump.dump_file; fp = g_log_err_dump.dump_file_p; default_file = DEFAULT_DUMP_FILE; }
         
         if (NULL == fp) {
@@ -232,7 +233,7 @@ void LIBC_CALL_CONVENTION log_err_dump_close() {
 
 bool LIBC_CALL_CONVENTION alligned_buffer_alloc(size_t size, size_t alignment, void* ptr) {
 
-    if ((size == 0 || alignment == 0) && (alignment <= size) && (0 != (size % alignment))) {
+    if ((0 == size || 0 == alignment) || (alignment > size) || (0 != size % alignment)) {
         log_error("%s: %s Invalid input for size=%zu and alignment=%zu", __func__, ERR, size, alignment);
         return false;
     }
@@ -257,7 +258,7 @@ bool LIBC_CALL_CONVENTION get_ascii_devname(const char* devname, size_t size, ch
     char slash = (slash_type == BACK_SLASH) ? '\\' : '/';
     char ascii_name[MAX_FILE_NAME_LEN] = {0};
 
-    if ( NULL == devname || size < 0 || NULL == ascii_devname ) {
+    if ( NULL == devname || 0 > size || NULL == ascii_devname ) {
         log_error("%s: %s Invalid input for devname=%p, size=%zu, ascii_devname=%p", __func__, ERR, devname, size, ascii_devname);
         return false;
     }
@@ -321,7 +322,7 @@ void LIBC_CALL_CONVENTION close_device(void* handle) {
 #ifdef _WIN32
 
     if ((HANDLE*) handle) {
-        closeHandle((HANDLE*) handle);
+        CloseHandle((HANDLE*) handle);
 #elif __linux__
 
     if ((int*) handle) {
