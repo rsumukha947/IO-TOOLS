@@ -85,7 +85,7 @@
 #define DEBUG                           "DEBUG:"
 
 /* ========================================================================
- * Type Definitions & Global variables
+ * Type Definitions Variable name extraction, & Global variables
  * ======================================================================== */
 
 typedef enum {
@@ -94,6 +94,8 @@ typedef enum {
     TE_PASS                             = 1
 
 } status_t;
+
+#define variable_name(var)              #var
 
 #ifdef __cplusplus
     }

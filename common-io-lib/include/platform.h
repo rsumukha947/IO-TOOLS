@@ -142,7 +142,7 @@
 #define ATTR_ALIGN(n)                               \
     __attribute__((aligned(n)))
 
-#define LIBC_CALL_CONVENTION      
+#define LIBC_CALL_CONVENTION
 
 #define ATTR_ALLIGNED_PACKED_STRUCT(struct_name, structure)  \
         typedef struct {                            \
@@ -209,7 +209,28 @@
 
 #define ASSERT(expr)                    assert(expr)
 
+/* ========================================================================
+ *  Platform specific structures for various operations
+ * ======================================================================== */
 
+ typedef struct mutex {
+
+    MUTEX_T                 mutex;
+#ifdef WIN32
+    LPSECURITY_ATTRIBUTES   lpmutex_security_attr;
+    BOOL                    initial_onwer;
+    LPCSTR                  mutex_name;
+#elif defined(__linux__)
+    pthread_mutexattr_t     mutex_attr;
+#endif
+
+ } mutex_t;
+
+ /* ========================================================================
+ *  Platform specific functions for various operations
+ * ======================================================================== */
+
+ 
 #ifdef __cplusplus
     }
 #endif
